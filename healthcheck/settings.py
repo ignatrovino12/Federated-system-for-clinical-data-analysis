@@ -142,3 +142,9 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
+
+# Authentication Settings
+LOGIN_URL = 'pubsub:login'
+LOGIN_REDIRECT_URL = 'pubsub:dashboard'
+LOGOUT_REDIRECT_URL = 'pubsub:login'
+

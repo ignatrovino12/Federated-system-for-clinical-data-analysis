@@ -1,0 +1,164 @@
+{% extends 'main/base.html' %}
+
+{% block title %}Add Patient - HealthCheck System{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="bg-white rounded-2xl shadow-xl p-8">
+        <div class="mb-8">
+            <h2 class="text-3xl font-bold text-primary mb-2">➕ Add New Patient</h2>
+            <p class="text-gray-600">Enter patient information below</p>
+        </div>
+        
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            <!-- Personal Information Section -->
+            <div class="border-b-2 border-gray-200 pb-6">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">📋 Personal Information</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="{{ form.nume.id_for_label }}" class="block mb-2 text-gray-700 font-medium">
+                            {{ form.nume.label }} <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.nume }}
+                        {% if form.nume.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.nume.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.prenume.id_for_label }}" class="block mb-2 text-gray-700 font-medium">
+                            {{ form.prenume.label }} <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.prenume }}
+                        {% if form.prenume.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.prenume.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.data_nasterii.id_for_label }}" class="block mb-2 text-gray-700 font-medium">
+                            {{ form.data_nasterii.label }} <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.data_nasterii }}
+                        {% if form.data_nasterii.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.data_nasterii.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.nationalitate.id_for_label }}" class="block mb-2 text-gray-700 font-medium">
+                            {{ form.nationalitate.label }}
+                        </label>
+                        {{ form.nationalitate }}
+                        {% if form.nationalitate.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.nationalitate.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Identity Document Section -->
+            <div class="border-b-2 border-gray-200 pb-6">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">📄 Identity Document</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label for="{{ form.CNP.id_for_label }}" class="block mb-2 text-gray-700 font-medium">
+                            {{ form.CNP.label }} <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.CNP }}
+                        {% if form.CNP.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.CNP.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.serie_ci.id_for_label }}" class="block mb-2 text-gray-700 font-medium">
+                            {{ form.serie_ci.label }} <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.serie_ci }}
+                        {% if form.serie_ci.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.serie_ci.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.numar_ci.id_for_label }}" class="block mb-2 text-gray-700 font-medium">
+                            {{ form.numar_ci.label }} <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.numar_ci }}
+                        {% if form.numar_ci.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.numar_ci.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Contact Information Section -->
+            <div class="border-b-2 border-gray-200 pb-6">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">📞 Contact Information</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="{{ form.telefon.id_for_label }}" class="block mb-2 text-gray-700 font-medium">
+                            {{ form.telefon.label }}
+                        </label>
+                        {{ form.telefon }}
+                        {% if form.telefon.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.telefon.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.email.id_for_label }}" class="block mb-2 text-gray-700 font-medium">
+                            {{ form.email.label }}
+                        </label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.email.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Address Section -->
+            <div class="pb-6">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">🏠 Address</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="{{ form.oras.id_for_label }}" class="block mb-2 text-gray-700 font-medium">
+                            {{ form.oras.label }} <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.oras }}
+                        {% if form.oras.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.oras.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.judet.id_for_label }}" class="block mb-2 text-gray-700 font-medium">
+                            {{ form.judet.label }} <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.judet }}
+                        {% if form.judet.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.judet.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="flex gap-4 pt-4">
+                <button type="submit" 
+                        class="flex-1 py-3 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-lg hover:-translate-y-1 transition-transform shadow-lg">
+                    ✅ Save Patient
+                </button>
+                <a href="{% url 'pubsub:patient_list' %}" 
+                   class="flex-1 py-3 bg-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-400 transition-colors text-center">
+                    ❌ Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

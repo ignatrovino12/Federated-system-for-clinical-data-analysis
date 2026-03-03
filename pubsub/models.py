@@ -1,26 +1,149 @@
 from django.db import models
+from django.core.validators import RegexValidator
+from django.contrib.auth.models import User
+from django.utils import timezone
+from datetime import date
+
+
+class UserProfile(models.Model):
+    """Extended user profile with role information"""
+    
+    ROLE_CHOICES = [
+        ('admin', 'Administrator'),
+        ('doctor', 'Doctor'),
+        ('receptionist', 'Receptionist'),
+    ]
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='receptionist')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'user_profiles'
+        verbose_name = 'User Profile'
+        verbose_name_plural = 'User Profiles'
+    
+    def __str__(self):
+        return f"{self.user.username} ({self.get_role_display()})"
+    
+    def can_view_full_data(self):
+        """Check if user can view full patient data"""
+        return self.role in ['admin', 'doctor']
+    
+    def can_edit_data(self):
+        """Check if user can edit patient data"""
+        return self.role in ['admin', 'doctor']
+    
+    def can_delete_data(self):
+        """Check if user can delete patient data"""
+        return self.role == 'admin'
+
+
+class AccessLog(models.Model):
+    """Audit log for tracking access to patient data"""
+    
+    ACTION_CHOICES = [
+        ('view', 'Viewed'),
+        ('edit', 'Edited'),
+        ('delete', 'Deleted'),
+        ('create', 'Created'),
+        ('search', 'Searched'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='access_logs')
+    patient = models.ForeignKey('Patient', on_delete=models.SET_NULL, null=True, related_name='access_logs')
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    timestamp = models.DateTimeField(default=timezone.now)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    details = models.TextField(blank=True, help_text="Additional details about the action")
+    
+    class Meta:
+        db_table = 'access_logs'
+        ordering = ['-timestamp']
+        verbose_name = 'Access Log'
+        verbose_name_plural = 'Access Logs'
+        indexes = [
+            models.Index(fields=['user', 'timestamp']),
+            models.Index(fields=['patient', 'timestamp']),
+        ]
+    
+    def __str__(self):
+        patient_name = self.patient.get_full_name() if self.patient else "N/A"
+        user_name = self.user.username if self.user else "N/A"
+        return f"{user_name} {self.get_action_display()} {patient_name} at {self.timestamp}"
 
 
 class Patient(models.Model):
     """Model for patient data in medical clinics"""
     
+    # Validators for Romanian identity documents
+    cnp_validator = RegexValidator(
+        regex=r'^\d{13}$',
+        message='CNP-ul trebuie să aibă exact 13 cifre'
+    )
+    
+    serie_ci_validator = RegexValidator(
+        regex=r'^[A-Z]{2}$',
+        message='Serie CI trebuie să aibă exact 2 litere majuscule'
+    )
+    
+    numar_ci_validator = RegexValidator(
+        regex=r'^\d{6}$',
+        message='Număr CI trebuie să aibă exact 6 cifre'
+    )
+    
+    phone_validator = RegexValidator(
+        regex=r'^(\+?[1-9]\d{1,14}|0\d{9,14})$',
+        message='Introduceți un număr de telefon valid în format internațional (ex: +40712345678)'
+    )
+    
+    email_validator = RegexValidator(
+        regex=r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+        message='Introduceți o adresă de email validă'
+    )
+    
     # Primary key 
     id = models.AutoField(primary_key=True)
     
     # Personal identification
-    CNP = models.CharField(max_length=13, unique=True, help_text="Cod Numeric Personal")
+    CNP = models.CharField(
+        max_length=13, 
+        unique=True, 
+        validators=[cnp_validator],
+        help_text="Cod Numeric Personal (13 digits)"
+    )
     nume = models.CharField(max_length=100, help_text="Last name")
     prenume = models.CharField(max_length=100, help_text="First name")
     data_nasterii = models.DateField(help_text="Date of birth")
     
     # Identity document
-    serie_ci = models.CharField(max_length=10, help_text="ID card series")
-    numar_ci = models.CharField(max_length=20, help_text="ID card number")
+    serie_ci = models.CharField(
+        max_length=2, 
+        validators=[serie_ci_validator],
+        help_text="ID card series (2 uppercase letters)"
+    )
+    numar_ci = models.CharField(
+        max_length=6, 
+        validators=[numar_ci_validator],
+        help_text="ID card number (6 digits)"
+    )
     nationalitate = models.CharField(max_length=50, default="Română", help_text="Nationality")
     
     # Contact information
-    telefon = models.CharField(max_length=20, blank=True, null=True, help_text="Phone number")
-    email = models.EmailField(blank=True, null=True, help_text="Email address")
+    telefon = models.CharField(
+        max_length=20, 
+        blank=True, 
+        null=True, 
+        validators=[phone_validator],
+        help_text="Phone number in international format (e.g., +40712345678)"
+    )
+    email = models.EmailField(
+        blank=True, 
+        null=True, 
+        validators=[email_validator],
+        help_text="Email address"
+    )
     
     # Address
     oras = models.CharField(max_length=100, help_text="City")
@@ -45,3 +168,39 @@ class Patient(models.Model):
     
     def get_full_name(self):
         return f"{self.prenume} {self.nume}"
+    
+    def get_initials(self):
+        """Return patient initials for privacy in lists"""
+        return f"{self.prenume[0]}. {self.nume[0]}."
+    
+    def get_masked_cnp(self):
+        """Mask CNP showing only last 4 digits"""
+        if len(self.CNP) >= 4:
+            return '*' * 9 + self.CNP[-4:]
+        return self.CNP
+    
+    def get_age(self):
+        """Calculate age from date of birth"""
+        today = date.today()
+        age = today.year - self.data_nasterii.year
+        if today.month < self.data_nasterii.month or (today.month == self.data_nasterii.month and today.day < self.data_nasterii.day):
+            age -= 1
+        return age
+    
+    def get_masked_phone(self):
+        """Mask phone number showing only first and last 3 digits"""
+        if self.telefon and len(self.telefon) >= 6:
+            return self.telefon[:3] + '*' * (len(self.telefon) - 6) + self.telefon[-3:]
+        return self.telefon or "—"
+    
+    def get_masked_email(self):
+        """Mask email showing only first char and domain"""
+        if self.email:
+            parts = self.email.split('@')
+            if len(parts) == 2:
+                return f"{parts[0][0]}***@{parts[1]}"
+        return "—"
+    
+    def get_masked_identity(self):
+        """Return masked identity document info"""
+        return f"{self.serie_ci} ******"

@@ -1,0 +1,122 @@
+{% extends 'main/base.html' %}
+
+{% block title %}Profile - HealthCheck System{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Profile Card -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-2xl shadow-xl p-8">
+                <div class="w-24 h-24 bg-gradient-to-r from-primary to-secondary rounded-full flex items-center justify-center text-5xl text-white mx-auto mb-8">
+                    {{ user.username|slice:":1"|upper }}
+                </div>
+                
+                <h2 class="text-3xl font-bold text-primary mb-8 pb-4 border-b-2 border-gray-200">User Profile</h2>
+                
+                <div class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="font-semibold text-gray-600">Username:</div>
+                        <div class="md:col-span-2 text-gray-900">{{ user.username }}</div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="font-semibold text-gray-600">Full Name:</div>
+                        <div class="md:col-span-2 text-gray-900">{{ user.get_full_name|default:"Not set" }}</div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="font-semibold text-gray-600">Email:</div>
+                        <div class="md:col-span-2 text-gray-900">{{ user.email|default:"Not set" }}</div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="font-semibold text-gray-600">Role:</div>
+                        <div class="md:col-span-2">
+                            {% if user_profile %}
+                                <span class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-primary to-secondary text-white rounded-lg font-semibold">
+                                    {{ user_profile.get_role_display }}
+                                </span>
+                            {% else %}
+                                <span class="text-gray-400">Not assigned</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="font-semibold text-gray-600">Admin:</div>
+                        <div class="md:col-span-2 text-gray-900">{{ user.is_staff|yesno:"Yes,No" }}</div>
+                    </div>
+                </div>
+                
+                <!-- Permissions -->
+                {% if user_profile %}
+                <div class="mt-8 p-6 bg-gray-50 rounded-lg">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">🔑 Your Permissions</h3>
+                    <div class="space-y-2">
+                        <div class="flex items-center">
+                            <span class="w-6">{% if user_profile.can_view_full_data %}✅{% else %}❌{% endif %}</span>
+                            <span class="text-gray-700">View full patient data</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="w-6">{% if user_profile.can_edit_data %}✅{% else %}❌{% endif %}</span>
+                            <span class="text-gray-700">Edit patient records</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="w-6">{% if user_profile.can_delete_data %}✅{% else %}❌{% endif %}</span>
+                            <span class="text-gray-700">Delete patient records</span>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Activity Log Sidebar -->
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-2xl shadow-xl p-6">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">📊 My Recent Activity</h3>
+                <p class="text-sm text-gray-600 mb-4">Your last 20 actions</p>
+                
+                {% if recent_logs %}
+                <div class="space-y-3 max-h-96 overflow-y-auto">
+                    {% for log in recent_logs %}
+                    <div class="border-l-4 {% if log.action == 'view' %}border-blue-500{% elif log.action == 'edit' %}border-yellow-500{% elif log.action == 'delete' %}border-red-500{% elif log.action == 'search' %}border-purple-500{% else %}border-green-500{% endif %} pl-3 py-2">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs px-2 py-1 rounded {% if log.action == 'view' %}bg-blue-100 text-blue-800{% elif log.action == 'edit' %}bg-yellow-100 text-yellow-800{% elif log.action == 'delete' %}bg-red-100 text-red-800{% elif log.action == 'search' %}bg-purple-100 text-purple-800{% else %}bg-green-100 text-green-800{% endif %}">
+                                {{ log.get_action_display }}
+                            </span>
+                        </div>
+                        {% if log.patient %}
+                        <p class="text-sm font-medium text-gray-900">{{ log.patient.get_initials }}</p>
+                        {% endif %}
+                        <p class="text-xs text-gray-500">{{ log.timestamp|date:"d M Y H:i:s" }}</p>
+                        {% if log.details %}
+                        <p class="text-xs text-gray-600 mt-1">{{ log.details|truncatewords:8 }}</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-sm text-gray-500 italic">No activity yet</p>
+                {% endif %}
+                
+                <div class="mt-4">
+                    <a href="{% url 'admin:pubsub_accesslog_changelist' %}?user__id__exact={{ user.id }}" 
+                       class="block text-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm">
+                        View Full History
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Privacy Notice -->
+            <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 class="text-sm font-semibold text-blue-900 mb-2">🔐 Privacy Notice</h4>
+                <p class="text-xs text-blue-800">
+                    All your actions are logged for security and compliance purposes. Access to patient data is monitored and must comply with GDPR regulations.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

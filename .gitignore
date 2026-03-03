@@ -52,6 +52,11 @@ Thumbs.db
 # Poetry
 poetry.lock
 
+# Celery
+celerybeat-schedule
+celerybeat.pid
+*.pid
+
 # Test coverage
 htmlcov/
 .tox/
