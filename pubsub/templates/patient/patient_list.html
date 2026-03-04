@@ -10,6 +10,9 @@
             <p class="text-gray-600">Total: {{ total_patients }} patient{{ total_patients|pluralize }}</p>
             {% if user_profile %}
                 <p class="text-sm text-gray-500 mt-1">Role: <span class="font-semibold">{{ user_profile.get_role_display }}</span></p>
+                {% if user_profile.role == 'doctor' %}
+                <p class="text-xs text-blue-600 mt-1">🔒 You can only view patients with whom you have appointments</p>
+                {% endif %}
             {% endif %}
         </div>
         <a href="{% url 'pubsub:patient_add' %}" 
@@ -71,11 +74,7 @@
                 <tr class="hover:bg-gray-50 transition-colors">
                     <td class="px-4 py-4 text-gray-900 font-mono">#{{ patient.id }}</td>
                     <td class="px-4 py-4 text-gray-900 font-medium">
-                        {% if show_full_data %}
                             {{ patient.get_full_name }}
-                        {% else %}
-                            {{ patient.get_initials }}
-                        {% endif %}
                     </td>
                     <td class="px-4 py-4 text-gray-600">{{ patient.get_age }} years</td>
                     <td class="px-4 py-4 text-gray-600 font-mono">

@@ -6,8 +6,10 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 from django.http import JsonResponse
 from functools import wraps
-from .models import Patient, UserProfile, AccessLog
+from datetime import datetime, date, timedelta
+from .models import Patient, UserProfile, AccessLog, Appointment
 from .forms import PatientForm
+from .redis_pubsub import AppointmentNotifier
 
 
 def get_client_ip(request):
@@ -38,6 +40,17 @@ def get_user_profile(user):
         defaults={'role': 'receptionist'}
     )
     return profile
+
+
+def get_unread_appointments_count(user):
+    """Get count of unread appointments for doctors"""
+    profile = get_user_profile(user)
+    if profile.role == 'doctor':
+        return Appointment.objects.filter(
+            doctor=user,
+            notification_read=False
+        ).count()
+    return 0
 
 
 def role_required(allowed_roles):
@@ -90,10 +103,26 @@ def dashboard_view(request):
     
     profile = get_user_profile(request.user)
     
+    # Get appointment statistics
+    today = date.today()
+    if profile.role == 'doctor':
+        appointments_query = Appointment.objects.filter(doctor=request.user)
+    else:
+        appointments_query = Appointment.objects.all()
+    
+    today_appointments = appointments_query.filter(appointment_date=today).count()
+    upcoming_appointments = appointments_query.filter(
+        appointment_date__gte=today,
+        status__in=['scheduled', 'confirmed']
+    ).count()
+    
     context = {
         'user': request.user,
         'user_profile': profile,
         'total_patients': Patient.objects.count(),
+        'today_appointments': today_appointments,
+        'upcoming_appointments': upcoming_appointments,
+        'unread_appointments_count': get_unread_appointments_count(request.user),
     }
     return render(request, 'main/dashboard.html', context)
 
@@ -110,6 +139,7 @@ def profile_view(request):
         'user': request.user,
         'user_profile': profile,
         'recent_logs': recent_logs,
+        'unread_appointments_count': get_unread_appointments_count(request.user),
     }
     return render(request, 'main/profile.html', context)
 
@@ -124,7 +154,7 @@ def patient_list_view(request):
     
     # Start with no patients (search-first approach)
     if search_query:
-        # Log search action
+        # Log search action with query details
         log_access(request.user, None, 'search', request, details=f"Searched: {search_query}")
         
         # Search by name, CNP (partial), city, or county
@@ -134,16 +164,33 @@ def patient_list_view(request):
             Q(CNP__icontains=search_query) |
             Q(oras__icontains=search_query) |
             Q(judet__icontains=search_query)
-        ).order_by('-created_at')
+        )
+        
+        # Doctors only see patients they have appointments with
+        if profile.role == 'doctor':
+            patients = patients.filter(
+                appointments__doctor=request.user
+            ).distinct()
+        
+        patients = patients.order_by('-created_at')
     else:
         patients = Patient.objects.none()
     
+    # Calculate total patients based on role
+    if profile.role == 'doctor':
+        total_patients = Patient.objects.filter(
+            appointments__doctor=request.user
+        ).distinct().count()
+    else:
+        total_patients = Patient.objects.count()
+    
     context = {
         'patients': patients,
-        'total_patients': Patient.objects.count(),
+        'total_patients': total_patients,
         'search_query': search_query,
         'user_profile': profile,
         'show_full_data': profile.can_view_full_data(),
+        'unread_appointments_count': get_unread_appointments_count(request.user),
     }
     return render(request, 'patient/patient_list.html', context)
 
@@ -155,8 +202,18 @@ def patient_detail_view(request, patient_id):
     patient = get_object_or_404(Patient, id=patient_id)
     profile = get_user_profile(request.user)
     
-    # Log access to patient data
-    log_access(request.user, patient, 'view', request, details="Viewed full patient details")
+    # Doctors can only view patients they have appointments with
+    if profile.role == 'doctor':
+        has_appointment = Appointment.objects.filter(
+            doctor=request.user,
+            patient=patient
+        ).exists()
+        if not has_appointment:
+            messages.error(request, 'You do not have permission to view this patient. You can only view patients with whom you have appointments.')
+            return redirect('pubsub:patient_list')
+    
+    # Log view action with patient details 
+    log_access(request.user, patient, 'view', request, details="Viewed full patient details") 
     
     # Get recent access logs for this patient
     recent_logs = AccessLog.objects.filter(patient=patient).select_related('user')[:10]
@@ -168,6 +225,7 @@ def patient_detail_view(request, patient_id):
         'can_delete': profile.can_delete_data(),
         'show_full_data': profile.can_view_full_data(),
         'recent_logs': recent_logs,
+        'unread_appointments_count': get_unread_appointments_count(request.user),
     }
     return render(request, 'patient/patient_detail.html', context)
 
@@ -191,7 +249,11 @@ def patient_add_view(request):
     else:
         form = PatientForm()
     
-    return render(request, 'patient/patient_add.html', {'form': form, 'user_profile': profile})
+    return render(request, 'patient/patient_add.html', {
+        'form': form,
+        'user_profile': profile,
+        'unread_appointments_count': get_unread_appointments_count(request.user),
+    })
 
 
 @login_required
@@ -200,6 +262,16 @@ def patient_edit_view(request, patient_id):
     """Edit an existing patient (doctors and admins only)"""
     patient = get_object_or_404(Patient, id=patient_id)
     profile = get_user_profile(request.user)
+    
+    # Doctors can only edit patients they have appointments with
+    if profile.role == 'doctor':
+        has_appointment = Appointment.objects.filter(
+            doctor=request.user,
+            patient=patient
+        ).exists()
+        if not has_appointment:
+            messages.error(request, 'You do not have permission to edit this patient. You can only edit patients with whom you have appointments.')
+            return redirect('pubsub:patient_list')
     
     if request.method == 'POST':
         form = PatientForm(request.POST, instance=patient)
@@ -214,7 +286,12 @@ def patient_edit_view(request, patient_id):
     else:
         form = PatientForm(instance=patient)
     
-    return render(request, 'patient/patient_edit.html', {'form': form, 'patient': patient, 'user_profile': profile})
+    return render(request, 'patient/patient_edit.html', {
+        'form': form,
+        'patient': patient,
+        'user_profile': profile,
+        'unread_appointments_count': get_unread_appointments_count(request.user),
+    })
 
 
 @login_required
@@ -227,12 +304,267 @@ def patient_delete_view(request, patient_id):
     if request.method == 'POST':
         patient_name = patient.get_full_name()
         patient_cnp = patient.CNP
-        # Log patient deletion before deleting
+
+        # Log patient delete
         log_access(request.user, patient, 'delete', request, details=f"Deleted patient {patient_name} (CNP: {patient_cnp})")
         patient.delete()
         messages.success(request, f'Patient {patient_name} deleted successfully!')
         return redirect('pubsub:patient_list')
     
-    return render(request, 'patient/patient_delete.html', {'patient': patient, 'user_profile': profile})
+    return render(request, 'patient/patient_delete.html', {
+        'patient': patient,
+        'user_profile': profile,
+        'unread_appointments_count': get_unread_appointments_count(request.user),
+    })
 
 
+# ======================= Appointment Views =======================
+
+@login_required
+@role_required(['admin', 'doctor', 'receptionist'])
+def appointment_list_view(request):
+    """View all appointments with filtering"""
+    profile = get_user_profile(request.user)
+    
+    # Get base queryset based on role
+    if profile.role == 'doctor':
+        # Doctors only see their own appointments
+        appointments = Appointment.objects.filter(doctor=request.user).select_related('patient', 'doctor', 'created_by')
+    else:
+        # Admins and receptionists see all appointments
+        appointments = Appointment.objects.all().select_related('patient', 'doctor', 'created_by')
+    
+    # Apply filters
+    status_filter = request.GET.get('status', '')
+    start_date = request.GET.get('start_date', '')
+    end_date = request.GET.get('end_date', '')
+    
+    if status_filter:
+        appointments = appointments.filter(status=status_filter)
+    if start_date:
+        appointments = appointments.filter(appointment_date__gte=start_date)
+    if end_date:
+        appointments = appointments.filter(appointment_date__lte=end_date)
+    
+    appointments = appointments.order_by('-appointment_date', '-appointment_time')
+    
+    # Calculate statistics
+    today = date.today()
+    total_count = appointments.count()
+    today_count = appointments.filter(appointment_date=today).count()
+    upcoming_count = appointments.filter(appointment_date__gte=today, status__in=['scheduled', 'confirmed']).count()
+    
+    # Unread notifications (for doctors only)
+    unread_count = 0
+    if profile.role == 'doctor':
+        unread_count = appointments.filter(notification_read=False).count()
+    
+    context = {
+        'appointments': appointments,
+        'user_profile': profile,
+        'status_filter': status_filter,
+        'start_date': start_date,
+        'end_date': end_date,
+        'stats': {
+            'total': total_count,
+            'today': today_count,
+            'upcoming': upcoming_count,
+            'unread': unread_count,
+        },
+        'status_choices': Appointment.STATUS_CHOICES,
+        'unread_appointments_count': unread_count,
+    }
+    
+    return render(request, 'appointment/appointment_list.html', context)
+
+
+@login_required
+@role_required(['admin', 'receptionist', 'doctor'])
+def appointment_create_view(request):
+    """Create a new appointment"""
+    profile = get_user_profile(request.user)
+    
+    if request.method == 'POST':
+        patient_id = request.POST.get('patient_id')
+        doctor_id = request.POST.get('doctor_id')
+        appointment_date = request.POST.get('appointment_date')
+        appointment_time = request.POST.get('appointment_time')
+        duration_minutes = request.POST.get('duration_minutes', 30)
+        reason = request.POST.get('reason')
+        notes = request.POST.get('notes', '')
+        
+        # Doctors can only create appointments for themselves
+        if profile.role == 'doctor':
+            doctor_id = str(request.user.id)
+        
+        # Validate required fields
+        if not patient_id or not doctor_id:
+            messages.error(request, 'Please select both a patient and a doctor.')
+            return redirect('pubsub:appointment_create')
+        
+        try:
+            patient = Patient.objects.get(id=patient_id)
+            doctor = User.objects.get(id=doctor_id)
+            
+            # Check for conflicts
+            conflicts = Appointment.objects.filter(
+                doctor=doctor,
+                appointment_date=appointment_date,
+                appointment_time=appointment_time
+            ).exists()
+            
+            if conflicts:
+                messages.error(request, 'This time slot is already booked for the selected doctor.')
+                return redirect('pubsub:appointment_create')
+            
+            # Create appointment
+            appointment = Appointment.objects.create(
+                patient=patient,
+                doctor=doctor,
+                appointment_date=appointment_date,
+                appointment_time=appointment_time,
+                duration_minutes=duration_minutes,
+                reason=reason,
+                notes=notes,
+                created_by=request.user
+            )
+            
+            # Send Redis notification
+            try:
+                notifier = AppointmentNotifier()
+                notifier.publish_appointment_created(appointment)
+                appointment.notification_sent = True
+                appointment.save(update_fields=['notification_sent'])
+            except Exception as e:
+                print(f"Redis notification failed: {e}")
+            
+            # Log action
+            log_access(request.user, patient, 'appointment_create', request, 
+                      details=f"Created appointment with Dr. {doctor.get_full_name()} on {appointment_date}")
+            
+            messages.success(request, 'Appointment created successfully!')
+            return redirect('pubsub:appointment_list')
+            
+        except Patient.DoesNotExist:
+            messages.error(request, f'Patient with ID {patient_id} not found.')
+            return redirect('pubsub:appointment_create')
+        except User.DoesNotExist:
+            messages.error(request, f'Doctor with ID {doctor_id} not found.')
+            return redirect('pubsub:appointment_create')
+        except Exception as e:
+            messages.error(request, f'Error creating appointment: {str(e)}')
+            return redirect('pubsub:appointment_create')
+    
+    # Get patients and doctors for selection
+    # Doctors can only create appointments for patients they already have appointments with
+    if profile.role == 'doctor':
+        patients = Patient.objects.filter(
+            appointments__doctor=request.user
+        ).distinct().order_by('nume', 'prenume')[:50]
+    else:
+        patients = Patient.objects.all().order_by('nume', 'prenume')[:50]  # Limit for performance
+    
+    doctors = User.objects.filter(profile__role='doctor').order_by('first_name', 'last_name')
+    
+    context = {
+        'patients': patients,
+        'doctors': doctors,
+        'user_profile': profile,
+        'unread_appointments_count': get_unread_appointments_count(request.user),
+    }
+    
+    return render(request, 'appointment/appointment_create.html', context)
+
+
+@login_required
+@role_required(['admin', 'doctor', 'receptionist'])
+def appointment_detail_view(request, appointment_id):
+    """View appointment details"""
+    appointment = get_object_or_404(Appointment, id=appointment_id)
+    profile = get_user_profile(request.user)
+    
+    # Check permissions
+    if profile.role == 'doctor' and appointment.doctor != request.user:
+        messages.error(request, 'You do not have permission to view this appointment.')
+        return redirect('pubsub:appointment_list')
+    
+    # Mark as read for doctors
+    if profile.role == 'doctor' and not appointment.notification_read:
+        appointment.notification_read = True
+        appointment.save(update_fields=['notification_read'])
+    
+    # Log access
+    log_access(request.user, appointment.patient, 'appointment_view', request,
+              details=f"Viewed appointment #{appointment.id}")
+    
+    context = {
+        'appointment': appointment,
+        'user_profile': profile,
+        'can_edit': profile.role in ['admin', 'doctor'],
+        'unread_appointments_count': get_unread_appointments_count(request.user),
+    }
+    
+    return render(request, 'appointment/appointment_detail.html', context)
+
+
+@login_required
+@role_required(['admin', 'doctor'])
+def appointment_update_status_view(request, appointment_id):
+    """Update appointment status"""
+    appointment = get_object_or_404(Appointment, id=appointment_id)
+    profile = get_user_profile(request.user)
+    
+    # Check permissions
+    if profile.role == 'doctor' and appointment.doctor != request.user:
+        messages.error(request, 'You do not have permission to modify this appointment.')
+        return redirect('pubsub:appointment_list')
+    
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+        notes = request.POST.get('notes', '')
+        
+        if new_status in dict(Appointment.STATUS_CHOICES):
+            old_status = appointment.status
+            appointment.status = new_status
+            if notes:
+                appointment.notes = appointment.notes + f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M')}] {notes}"
+            appointment.save()
+            
+            # Send Redis notification about status update
+            try:
+                notifier = AppointmentNotifier()
+                notifier.publish_appointment_updated(appointment, old_status, new_status)
+            except Exception as e:
+                print(f"Redis notification failed: {e}")
+            
+            # Log action
+            log_access(request.user, appointment.patient, 'appointment_update', request,
+                      details=f"Updated appointment #{appointment.id} status from {old_status} to {new_status}")
+            
+            messages.success(request, f'Appointment status updated to {appointment.get_status_display()}')
+        else:
+            messages.error(request, 'Invalid status selected.')
+    
+    return redirect('pubsub:appointment_detail', appointment_id=appointment.id)
+
+
+@login_required
+def appointment_search_patients_ajax(request):
+    """AJAX endpoint for searching patients during appointment creation"""
+    query = request.GET.get('q', '')
+    
+    if len(query) < 2:
+        return JsonResponse({'results': []})
+    
+    patients = Patient.objects.filter(
+        Q(nume__icontains=query) | 
+        Q(prenume__icontains=query) |
+        Q(CNP__icontains=query)
+    )[:10]
+    
+    results = [{
+        'id': p.id,
+        'text': f"{p.get_full_name()} - CNP: {p.get_masked_cnp()}"
+    } for p in patients]
+    
+    return JsonResponse({'results': results})

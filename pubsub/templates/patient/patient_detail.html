@@ -58,8 +58,12 @@
                     <h3 class="text-xl font-semibold text-gray-800 mb-4">📋 Personal Information</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <p class="text-sm text-gray-500">Full Name</p>
-                            <p class="text-lg font-medium text-gray-900">{{ patient.get_full_name }}</p>
+                            <p class="text-sm text-gray-500">First Name</p>
+                            <p class="text-lg font-medium text-gray-900">{{ patient.prenume }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Last Name</p>
+                            <p class="text-lg font-medium text-gray-900">{{ patient.nume }}</p>
                         </div>
                         <div>
                             <p class="text-sm text-gray-500">Date of Birth / Age</p>
@@ -70,14 +74,6 @@
                                     {{ patient.get_age }} years old
                                 {% endif %}
                             </p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">First Name</p>
-                            <p class="text-lg font-medium text-gray-900">{{ patient.prenume }}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Last Name</p>
-                            <p class="text-lg font-medium text-gray-900">{{ patient.nume }}</p>
                         </div>
                         <div>
                             <p class="text-sm text-gray-500">Nationality</p>
@@ -238,21 +234,6 @@
                 </p>
             </div>
             
-            {% if not show_full_data %}
-            <!-- Data Masking Notice -->
-            <div class="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <h4 class="text-sm font-semibold text-yellow-900 mb-2">🔒 Data Privacy</h4>
-                <p class="text-xs text-yellow-800">
-                    Sensitive information is masked based on your role ({{ user_profile.get_role_display }}).<br><br>
-                    <strong>Masked fields:</strong><br>
-                    • CNP (last 4 digits shown)<br>
-                    • Date of Birth (age only)<br>
-                    • ID Card Number<br>
-                    • Phone & Email<br><br>
-                    Contact an admin for full access rights.
-                </p>
-            </div>
-            {% endif %}
         </div>
     </div>
 </div>

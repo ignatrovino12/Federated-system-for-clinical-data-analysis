@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Patient, UserProfile, AccessLog
+from .models import Patient, UserProfile, AccessLog, Appointment
 
 
 @admin.register(UserProfile)
@@ -52,3 +52,32 @@ class PatientAdmin(admin.ModelAdmin):
         }),
     )
 
+
+@admin.register(Appointment)
+class AppointmentAdmin(admin.ModelAdmin):
+    list_display = ('id', 'patient', 'doctor', 'appointment_date', 'appointment_time', 'status', 'notification_sent', 'created_by')
+    list_filter = ('status', 'appointment_date', 'doctor', 'notification_sent')
+    search_fields = ('patient__nume', 'patient__prenume', 'doctor__username', 'reason')
+    ordering = ('-appointment_date', '-appointment_time')
+    readonly_fields = ('created_by', 'created_at', 'updated_at', 'notification_sent')
+    
+    fieldsets = (
+        ('Appointment Details', {
+            'fields': ('patient', 'doctor', 'appointment_date', 'appointment_time', 'duration_minutes')
+        }),
+        ('Status & Notes', {
+            'fields': ('status', 'reason', 'notes')
+        }),
+        ('Notifications', {
+            'fields': ('notification_sent', 'notification_read')
+        }),
+        ('Metadata', {
+            'fields': ('created_by', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def save_model(self, request, obj, form, change):
+        if not change:  # If creating new appointment
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)

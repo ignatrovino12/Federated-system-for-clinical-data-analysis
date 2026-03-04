@@ -77,7 +77,7 @@ class AccessLog(models.Model):
 class Patient(models.Model):
     """Model for patient data in medical clinics"""
     
-    # Validators for Romanian identity documents
+    # Validators for personal identification fields
     cnp_validator = RegexValidator(
         regex=r'^\d{13}$',
         message='CNP-ul trebuie să aibă exact 13 cifre'
@@ -204,3 +204,77 @@ class Patient(models.Model):
     def get_masked_identity(self):
         """Return masked identity document info"""
         return f"{self.serie_ci} ******"
+
+
+class Appointment(models.Model):
+    """Model for patient appointments with doctors"""
+    
+    STATUS_CHOICES = [
+        ('scheduled', 'Scheduled'),
+        ('confirmed', 'Confirmed'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+        ('no_show', 'No Show'),
+    ]
+    
+    # Appointment details
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='appointments')
+    doctor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='doctor_appointments', 
+                               limit_choices_to={'profile__role': 'doctor'})
+    
+    # Schedule
+    appointment_date = models.DateField(help_text="Appointment date")
+    appointment_time = models.TimeField(help_text="Appointment time")
+    duration_minutes = models.IntegerField(default=30, help_text="Duration in minutes")
+    
+    # Status and details
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='scheduled')
+    reason = models.TextField(help_text="Reason for appointment")
+    notes = models.TextField(blank=True, help_text="Additional notes")
+    
+    # Tracking
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_appointments')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Redis notification tracking
+    notification_sent = models.BooleanField(default=False)
+    notification_read = models.BooleanField(default=False)
+    
+    class Meta:
+        db_table = 'appointments'
+        ordering = ['appointment_date', 'appointment_time']
+        verbose_name = 'Appointment'
+        verbose_name_plural = 'Appointments'
+        indexes = [
+            models.Index(fields=['appointment_date', 'appointment_time']),
+            models.Index(fields=['patient', 'appointment_date']),
+            models.Index(fields=['doctor', 'appointment_date']),
+            models.Index(fields=['status']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['doctor', 'appointment_date', 'appointment_time'],
+                name='unique_doctor_appointment_slot'
+            )
+        ]
+    
+    def __str__(self):
+        return f"{self.patient.get_full_name()} with Dr. {self.doctor.get_full_name() or self.doctor.username} on {self.appointment_date} at {self.appointment_time}"
+    
+    def get_end_time(self):
+        """Calculate appointment end time"""
+        from datetime import datetime, timedelta
+        start = datetime.combine(self.appointment_date, self.appointment_time)
+        end = start + timedelta(minutes=self.duration_minutes)
+        return end.time()
+    
+    def is_past(self):
+        """Check if appointment is in the past"""
+        from datetime import datetime
+        appointment_datetime = datetime.combine(self.appointment_date, self.appointment_time)
+        return appointment_datetime < datetime.now()
+    
+    def can_cancel(self):
+        """Check if appointment can be cancelled"""
+        return self.status in ['scheduled', 'confirmed'] and not self.is_past()

@@ -28,6 +28,14 @@
                 <div class="flex space-x-8">
                     <a href="{% url 'pubsub:dashboard' %}" class="text-gray-700 hover:text-primary transition-colors">Dashboard</a>
                     <a href="{% url 'pubsub:patient_list' %}" class="text-gray-700 hover:text-primary transition-colors">Patients</a>
+                    <a href="{% url 'pubsub:appointment_list' %}" class="relative text-gray-700 hover:text-primary transition-colors">
+                        Appointments
+                        {% if user_profile.role == 'doctor' and unread_appointments_count > 0 %}
+                        <span class="absolute -top-1 -right-4 bg-red-500 text-white text-xs rounded-full px-2 py-0.5 font-bold animate-pulse">
+                            {{ unread_appointments_count }}
+                        </span>
+                        {% endif %}
+                    </a>
                     <a href="{% url 'pubsub:profile' %}" class="text-gray-700 hover:text-primary transition-colors">Profile</a>
                     <a href="{% url 'admin:index' %}" class="text-gray-700 hover:text-primary transition-colors">Admin</a>
                     <a href="{% url 'pubsub:logout' %}" class="text-gray-700 hover:text-primary transition-colors">Logout</a>

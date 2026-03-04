@@ -21,17 +21,28 @@
         </div>
         
         <div class="bg-gradient-to-r from-pink-400 to-red-500 text-white p-8 rounded-xl shadow-lg">
-            <h3 class="text-5xl font-bold mb-2">0</h3>
+            <h3 class="text-5xl font-bold mb-2">{{ today_appointments }}</h3>
             <p class="text-lg opacity-90">Appointments Today</p>
+        </div>
+        
+        <div class="bg-gradient-to-r from-green-400 to-blue-500 text-white p-8 rounded-xl shadow-lg">
+            <h3 class="text-5xl font-bold mb-2">{{ upcoming_appointments }}</h3>
+            <p class="text-lg opacity-90">Upcoming Appointments</p>
         </div>
         
     </div>
     
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-8">
         <a href="{% url 'pubsub:patient_list' %}" 
            class="p-6 bg-gray-100 rounded-xl text-center hover:bg-primary hover:text-white hover:-translate-y-2 transition-all duration-300 shadow-md">
             <div class="text-4xl mb-2">👥</div>
             <div class="font-medium">Search Patients</div>
+        </a>
+        
+        <a href="{% url 'pubsub:appointment_list' %}" 
+           class="p-6 bg-gray-100 rounded-xl text-center hover:bg-primary hover:text-white hover:-translate-y-2 transition-all duration-300 shadow-md">
+            <div class="text-4xl mb-2">📅</div>
+            <div class="font-medium">Appointments</div>
         </a>
         
         <a href="{% url 'pubsub:profile' %}" 
@@ -39,6 +50,14 @@
             <div class="text-4xl mb-2">👤</div>
             <div class="font-medium">My Profile</div>
         </a>
+        
+        {% if user_profile.role in 'receptionist,admin,doctor' %}
+        <a href="{% url 'pubsub:appointment_create' %}" 
+           class="p-6 bg-gradient-to-r from-primary to-secondary text-white rounded-xl text-center hover:scale-105 transition-all duration-300 shadow-md">
+            <div class="text-4xl mb-2">➕</div>
+            <div class="font-medium">New Appointment</div>
+        </a>
+        {% endif %}
         
     </div>
 </div>

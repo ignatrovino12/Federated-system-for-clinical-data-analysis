@@ -18,4 +18,13 @@ urlpatterns = [
     path('patients/<int:patient_id>/', views.patient_detail_view, name='patient_detail'),
     path('patients/<int:patient_id>/edit/', views.patient_edit_view, name='patient_edit'),
     path('patients/<int:patient_id>/delete/', views.patient_delete_view, name='patient_delete'),
+    
+    # Appointment Management
+    path('appointments/', views.appointment_list_view, name='appointment_list'),
+    path('appointments/create/', views.appointment_create_view, name='appointment_create'),
+    path('appointments/<int:appointment_id>/', views.appointment_detail_view, name='appointment_detail'),
+    path('appointments/<int:appointment_id>/update-status/', views.appointment_update_status_view, name='appointment_update_status'),
+    
+    # AJAX endpoints
+    path('ajax/search-patients/', views.appointment_search_patients_ajax, name='ajax_search_patients'),
 ]
