@@ -57,7 +57,7 @@ class AppointmentNotifier:
     def publish_appointment_updated(appointment, action='updated'):
         """
         Publish notification when appointment is updated or cancelled
-        Action type (updated, cancelled, confirmed, etc.)
+        Action type (updated, cancelled, confirmed)
         """
         channel = f"{AppointmentNotifier.CHANNEL_PREFIX}:doctor:{appointment.doctor.id}"
         

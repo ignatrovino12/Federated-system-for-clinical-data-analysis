@@ -5,12 +5,15 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.http import JsonResponse
+from django.core.exceptions import ValidationError
 from functools import wraps
 from datetime import datetime, date, timedelta
 from .models import Patient, UserProfile, AccessLog, Appointment
 from .forms import PatientForm
 from .redis_pubsub import AppointmentNotifier
 
+
+# UTILITY FUNCTIONS
 
 def get_client_ip(request):
     """Get client IP address from request"""
@@ -66,6 +69,8 @@ def role_required(allowed_roles):
         return wrapper
     return decorator
 
+
+# AUTHENTICATION AND DASHBOARD VIEWS
 
 def login_view(request):
     """Login view for clinic personnel"""
@@ -143,6 +148,8 @@ def profile_view(request):
     }
     return render(request, 'main/profile.html', context)
 
+
+# PATIENT VIEWS
 
 @login_required
 def patient_list_view(request):
@@ -318,7 +325,7 @@ def patient_delete_view(request, patient_id):
     })
 
 
-# ======================= Appointment Views =======================
+# APPOINTMENT VIEWS
 
 @login_required
 @role_required(['admin', 'doctor', 'receptionist'])
@@ -336,15 +343,16 @@ def appointment_list_view(request):
     
     # Apply filters
     status_filter = request.GET.get('status', '')
-    start_date = request.GET.get('start_date', '')
-    end_date = request.GET.get('end_date', '')
+    # Date range comes from "From Date" / "To Date" inputs in the template
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
     
     if status_filter:
         appointments = appointments.filter(status=status_filter)
-    if start_date:
-        appointments = appointments.filter(appointment_date__gte=start_date)
-    if end_date:
-        appointments = appointments.filter(appointment_date__lte=end_date)
+    if date_from:
+        appointments = appointments.filter(appointment_date__gte=date_from)
+    if date_to:
+        appointments = appointments.filter(appointment_date__lte=date_to)
     
     appointments = appointments.order_by('-appointment_date', '-appointment_time')
     
@@ -363,8 +371,8 @@ def appointment_list_view(request):
         'appointments': appointments,
         'user_profile': profile,
         'status_filter': status_filter,
-        'start_date': start_date,
-        'end_date': end_date,
+        'start_date': date_from,
+        'end_date': date_to,
         'stats': {
             'total': total_count,
             'today': today_count,
@@ -450,6 +458,15 @@ def appointment_create_view(request):
             return redirect('pubsub:appointment_create')
         except User.DoesNotExist:
             messages.error(request, f'Doctor with ID {doctor_id} not found.')
+            return redirect('pubsub:appointment_create')
+        except ValidationError as e:
+            # Surface model validation errors (including overlapping interval)
+            if hasattr(e, 'message_dict'):
+                for field_errors in e.message_dict.values():
+                    for err in field_errors:
+                        messages.error(request, err)
+            else:
+                messages.error(request, str(e))
             return redirect('pubsub:appointment_create')
         except Exception as e:
             messages.error(request, f'Error creating appointment: {str(e)}')

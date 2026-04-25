@@ -278,3 +278,56 @@ class Appointment(models.Model):
     def can_cancel(self):
         """Check if appointment can be cancelled"""
         return self.status in ['scheduled', 'confirmed'] and not self.is_past()
+
+    def clean(self):
+        """Extra validation for appointments (time grid + overlap for same doctor)."""
+        from datetime import datetime, timedelta
+        from django.core.exceptions import ValidationError
+
+        super().clean()
+
+        if not self.doctor_id or not self.appointment_date or not self.appointment_time:
+            return
+
+        # Enforce fixed 15-minute grid
+        allowed_minutes = {0, 15, 30, 45}
+        if self.appointment_time.minute not in allowed_minutes:
+            raise ValidationError({
+                'appointment_time': (
+                    "Appointments can only be scheduled at fixed times: 00, 15, 30, or 45 minutes."
+                )
+            })
+
+        # Compute this appointment's interval
+        start_dt = datetime.combine(self.appointment_date, self.appointment_time)
+        duration = self.duration_minutes or 30
+        end_dt = start_dt + timedelta(minutes=duration)
+
+        # Find other appointments for the same doctor/date that are not cancelled/no_show
+        overlapping_qs = Appointment.objects.filter(
+            doctor=self.doctor,
+            appointment_date=self.appointment_date,
+        ).exclude(
+            id=self.id
+        ).exclude(
+            status__in=['cancelled', 'no_show']
+        )
+
+        for other in overlapping_qs:
+            other_start = datetime.combine(other.appointment_date, other.appointment_time)
+            other_duration = other.duration_minutes or 30
+            other_end = other_start + timedelta(minutes=other_duration)
+
+            # Intervals overlap if start < other_end and end > other_start
+            if start_dt < other_end and end_dt > other_start:
+                raise ValidationError({
+                    'appointment_time': (
+                        "The appointment overlaps with another appointment for the same doctor "
+                        f"({other_start.strftime('%H:%M')} - {other_end.strftime('%H:%M')})."
+                    )
+                })
+
+    def save(self, *args, **kwargs):
+        # Ensure validation (including overlap check) always runs before saving
+        self.full_clean()
+        return super().save(*args, **kwargs)

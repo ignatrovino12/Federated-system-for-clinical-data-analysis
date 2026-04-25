@@ -1,0 +1,18 @@
+{
+  "feature_cols": [
+    "gender",
+    "age",
+    "hypertension",
+    "heart_disease",
+    "smoking_history",
+    "bmi",
+    "HbA1c_level",
+    "blood_glucose_level"
+  ],
+  "threshold": 0.2877254509018036,
+  "threshold_mode": "recall_at_min_precision",
+  "min_recall_target": 0.45,
+  "min_precision_target": 0.7,
+  "model_class": "DiabetesNet",
+  "input_dim": 8
+}

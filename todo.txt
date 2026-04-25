@@ -1,0 +1,2 @@
+- when doctor makes an appointment it should not appear as notification for him
+- delete appointments when needed (or after completion)
