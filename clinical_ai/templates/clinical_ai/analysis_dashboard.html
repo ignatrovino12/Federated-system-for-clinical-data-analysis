@@ -1,0 +1,159 @@
+{% extends 'main/base.html' %}
+
+{% block title %}AI Analysis - HealthCheck{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-8">
+    <div class="bg-white/95 rounded-3xl shadow-2xl p-8 border border-white/40">
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+            <div>
+                <p class="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-4">Clinical AI</p>
+                <h1 class="text-4xl font-bold text-gray-900 mb-3">Diabetes Risk Analysis</h1>
+                <p class="text-gray-600 max-w-3xl">Run an analysis with manual inputs or use the clinical data already stored for patients you can access.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        <section class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+            <div class="bg-gradient-to-r from-primary to-secondary px-8 py-6 text-white">
+                <h2 class="text-2xl font-bold">Manual input analysis</h2>
+                <p class="text-white/85 mt-1">Enter the clinical values manually and score them with either model.</p>
+            </div>
+            <div class="p-8 space-y-8">
+                {% if manual_error %}
+                <div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-800">
+                    {{ manual_error }}
+                </div>
+                {% endif %}
+
+                {% if manual_result %}
+                <div class="p-5 rounded-2xl border border-emerald-200 bg-emerald-50">
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <p class="text-sm text-emerald-700 font-semibold">{{ manual_result.model_label }}</p>
+                            <p class="text-xl font-bold text-emerald-900">Diabetes probability</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-4xl font-black text-emerald-700">{{ manual_result.probability_pct|floatformat:2 }}%</p>
+                            <p class="text-sm text-emerald-700">Threshold: {{ manual_result.threshold|floatformat:2 }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="grid grid-cols-1 gap-6">
+                    <form method="post" class="rounded-2xl border border-gray-200 p-6 bg-gray-50/70 space-y-5">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="manual_alex">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-900">Alex 5050 model</h3>
+                                <p class="text-sm text-gray-600">Lifestyle, access, and general health inputs.</p>
+                            </div>
+                            <span class="px-3 py-1 rounded-full bg-white text-primary text-xs font-semibold border border-primary/20">Manual</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {% for field in alex_form %}
+                            <div class="{% if field.name in 'high_bp,high_chol,chol_check,smoker,stroke,phys_activity,fruits,veggies,heavy_alcohol_consumption,any_healthcare,no_docbc_cost,diff_walk' %}flex items-center gap-3 md:col-span-1{% else %}md:col-span-1{% endif %}">
+                                <div class="w-full">
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {% if field.errors %}<p class="text-sm text-red-600 mt-1">{{ field.errors|striptags }}</p>{% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <button type="submit" class="w-full px-6 py-3 rounded-xl bg-gray-900 text-white font-semibold hover:bg-gray-800 transition-colors">
+                            Run Alex 5050 analysis
+                        </button>
+                    </form>
+
+                    <form method="post" class="rounded-2xl border border-gray-200 p-6 bg-gray-50/70 space-y-5">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="manual_mustafa">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-900">Mustafa model</h3>
+                                <p class="text-sm text-gray-600">Core clinical measurements and diabetes-related risk factors.</p>
+                            </div>
+                            <span class="px-3 py-1 rounded-full bg-white text-primary text-xs font-semibold border border-primary/20">Manual</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {% for field in mustafa_form %}
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.errors %}<p class="text-sm text-red-600 mt-1">{{ field.errors|striptags }}</p>{% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <button type="submit" class="w-full px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-opacity-90 transition-colors">
+                            Run Mustafa analysis
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+            <div class="bg-gradient-to-r from-secondary to-primary px-8 py-6 text-white">
+                <h2 class="text-2xl font-bold">Patient record analysis</h2>
+                <p class="text-white/85 mt-1">Select a patient you can access, then run the model against stored clinical data.</p>
+            </div>
+            <div class="p-8 space-y-6">
+                {% if quick_error %}
+                <div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-800">
+                    {{ quick_error }}
+                </div>
+                {% endif %}
+
+                {% if quick_result %}
+                <div class="p-5 rounded-2xl border border-emerald-200 bg-emerald-50">
+                    <p class="text-sm text-emerald-700 font-semibold">{{ quick_result.model_label }}</p>
+                    <h3 class="text-xl font-bold text-emerald-900 mt-1">{{ quick_result.patient_label }}</h3>
+                    <div class="mt-4 flex items-end justify-between gap-4">
+                        <div>
+                            <p class="text-sm text-emerald-700">Diabetes probability</p>
+                            <p class="text-4xl font-black text-emerald-700">{{ quick_result.probability_pct|floatformat:2 }}%</p>
+                        </div>
+                        <p class="text-sm text-emerald-700">Threshold: {{ quick_result.threshold|floatformat:2 }}</p>
+                    </div>
+                </div>
+                {% endif %}
+
+                <form method="post" class="space-y-5">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="quick_patient">
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="{{ selection_form.model.id_for_label }}">{{ selection_form.model.label }}</label>
+                        {{ selection_form.model }}
+                        {% if selection_form.model.errors %}<p class="text-sm text-red-600 mt-1">{{ selection_form.model.errors|striptags }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="{{ selection_form.patient.id_for_label }}">{{ selection_form.patient.label }}</label>
+                        {{ selection_form.patient }}
+                        {% if selection_form.patient.errors %}<p class="text-sm text-red-600 mt-1">{{ selection_form.patient.errors|striptags }}</p>{% endif %}
+                    </div>
+
+                    <div class="rounded-2xl border border-gray-200 bg-gray-50 p-5 text-sm text-gray-600 space-y-2">
+                        <p class="font-semibold text-gray-800">Access rules</p>
+                        <p>Doctors only see patients with appointments assigned to them.</p>
+                        <p>Admins can analyze all patients in the system.</p>
+                    </div>
+
+                    <button type="submit" class="w-full px-6 py-3 rounded-xl bg-gray-900 text-white font-semibold hover:bg-gray-800 transition-colors">
+                        Run patient analysis
+                    </button>
+                </form>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

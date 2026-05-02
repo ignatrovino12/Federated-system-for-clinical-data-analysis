@@ -1,0 +1,132 @@
+{% extends 'main/base.html' %}
+
+{% block title %}Medical Data - {{ patient.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="mb-4">
+        <a href="{% url 'pubsub:patient_detail' patient.id %}" class="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+            ← Back to Patient Details
+        </a>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-xl p-8">
+        <div class="flex justify-between items-start mb-6">
+            <div>
+                <h2 class="text-3xl font-bold text-primary mb-2">Clinical Record</h2>
+                <p class="text-gray-600">Enter or change the patient's medical data for AI analysis.</p>
+            </div>
+        </div>
+
+        <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p class="text-sm text-blue-800">
+                Patient: <strong>{{ patient.get_full_name }}</strong> | CNP: <strong>{{ patient.get_masked_cnp }}</strong>
+            </p>
+        </div>
+
+        <form method="post" class="space-y-8">
+            {% csrf_token %}
+
+            {% if form.errors %}
+            <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
+                <p class="font-semibold mb-2">Please fix the errors below.</p>
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Demographics & History</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2" for="{{ form.gender.id_for_label }}">{{ form.gender.label }}</label>
+                            {{ form.gender }}
+                            {{ form.gender.errors }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2" for="{{ form.age_years.id_for_label }}">{{ form.age_years.label }}</label>
+                            {{ form.age_years }}
+                            {{ form.age_years.errors }}
+                        </div>
+                        <div class="flex items-center gap-3">{{ form.hypertension }} <label for="{{ form.hypertension.id_for_label }}">{{ form.hypertension.label }}</label></div>
+                        <div class="flex items-center gap-3">{{ form.heart_disease }} <label for="{{ form.heart_disease.id_for_label }}">{{ form.heart_disease.label }}</label></div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2" for="{{ form.smoking_history.id_for_label }}">{{ form.smoking_history.label }}</label>
+                            {{ form.smoking_history }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Measurements & Labs</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2" for="{{ form.bmi.id_for_label }}">{{ form.bmi.label }}</label>
+                            {{ form.bmi }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2" for="{{ form.hba1c_level.id_for_label }}">{{ form.hba1c_level.label }}</label>
+                            {{ form.hba1c_level }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2" for="{{ form.blood_glucose_level.id_for_label }}">{{ form.blood_glucose_level.label }}</label>
+                            {{ form.blood_glucose_level }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">Lifestyle & Access to Care</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="flex items-center gap-3">{{ form.high_bp }} <label for="{{ form.high_bp.id_for_label }}">{{ form.high_bp.label }}</label></div>
+                    <div class="flex items-center gap-3">{{ form.high_chol }} <label for="{{ form.high_chol.id_for_label }}">{{ form.high_chol.label }}</label></div>
+                    <div class="flex items-center gap-3">{{ form.chol_check }} <label for="{{ form.chol_check.id_for_label }}">{{ form.chol_check.label }}</label></div>
+                    <div class="flex items-center gap-3">{{ form.smoker }} <label for="{{ form.smoker.id_for_label }}">{{ form.smoker.label }}</label></div>
+                    <div class="flex items-center gap-3">{{ form.stroke }} <label for="{{ form.stroke.id_for_label }}">{{ form.stroke.label }}</label></div>
+                    <div class="flex items-center gap-3">{{ form.phys_activity }} <label for="{{ form.phys_activity.id_for_label }}">{{ form.phys_activity.label }}</label></div>
+                    <div class="flex items-center gap-3">{{ form.fruits }} <label for="{{ form.fruits.id_for_label }}">{{ form.fruits.label }}</label></div>
+                    <div class="flex items-center gap-3">{{ form.veggies }} <label for="{{ form.veggies.id_for_label }}">{{ form.veggies.label }}</label></div>
+                    <div class="flex items-center gap-3">{{ form.heavy_alcohol_consumption }} <label for="{{ form.heavy_alcohol_consumption.id_for_label }}">{{ form.heavy_alcohol_consumption.label }}</label></div>
+                    <div class="flex items-center gap-3">{{ form.any_healthcare }} <label for="{{ form.any_healthcare.id_for_label }}">{{ form.any_healthcare.label }}</label></div>
+                    <div class="flex items-center gap-3">{{ form.no_docbc_cost }} <label for="{{ form.no_docbc_cost.id_for_label }}">{{ form.no_docbc_cost.label }}</label></div>
+                    <div class="flex items-center gap-3">{{ form.diff_walk }} <label for="{{ form.diff_walk.id_for_label }}">{{ form.diff_walk.label }}</label></div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="{{ form.general_health.id_for_label }}">{{ form.general_health.label }}</label>
+                        {{ form.general_health }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="{{ form.mental_health_days.id_for_label }}">{{ form.mental_health_days.label }}</label>
+                        {{ form.mental_health_days }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="{{ form.physical_health_days.id_for_label }}">{{ form.physical_health_days.label }}</label>
+                        {{ form.physical_health_days }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="{{ form.education.id_for_label }}">{{ form.education.label }}</label>
+                        {{ form.education }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="{{ form.income.id_for_label }}">{{ form.income.label }}</label>
+                        {{ form.income }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">Clinical Notes</h3>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
+                {{ form.notes }}
+            </div>
+
+            <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                <a href="{% url 'pubsub:patient_detail' patient.id %}" class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">Cancel</a>
+                <button type="submit" class="px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-opacity-90 transition-colors">
+                    Save Medical Data
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

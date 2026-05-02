@@ -28,6 +28,9 @@
                 <div class="flex space-x-8">
                     <a href="{% url 'pubsub:dashboard' %}" class="text-gray-700 hover:text-primary transition-colors">Dashboard</a>
                     <a href="{% url 'pubsub:patient_list' %}" class="text-gray-700 hover:text-primary transition-colors">Patients</a>
+                    {% if user_profile.role == 'doctor' or user_profile.role == 'admin' %}
+                    <a href="{% url 'clinical_ai:analysis_dashboard' %}" class="text-gray-700 hover:text-primary transition-colors">AI Analysis</a>
+                    {% endif %}
                     <a href="{% url 'pubsub:appointment_list' %}" class="relative text-gray-700 hover:text-primary transition-colors">
                         Appointments
                         {% if user_profile.role == 'doctor' and unread_appointments_count > 0 %}

@@ -43,6 +43,10 @@
                            class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
                             ✏️ Edit
                         </a>
+                        <a href="{% url 'clinical_ai:patient_medical_data' patient.id %}"
+                           class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                            🩺 Medical Data
+                        </a>
                         {% endif %}
                         {% if can_delete %}
                         <a href="{% url 'pubsub:patient_delete' patient.id %}" 

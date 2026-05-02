@@ -1,2 +1,3 @@
 - when doctor makes an appointment it should not appear as notification for him
-- delete appointments when needed (or after completion)
+- delete appointments when needed (or after completion) or make them expire
+- make the ai check for critical cases and anounce the doctors

@@ -22,4 +22,5 @@ urlpatterns = [
     path("", RedirectView.as_view(pattern_name='pubsub:login'), name='home'),
     path("admin/", admin.site.urls),
     path("pubsub/", include("pubsub.urls")),
+    path("clinical-ai/", include("clinical_ai.urls")),
 ]
