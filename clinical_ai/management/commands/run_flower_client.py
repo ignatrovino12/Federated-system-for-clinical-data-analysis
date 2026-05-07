@@ -1,0 +1,196 @@
+import os
+from typing import Dict, List, Optional, Tuple
+
+import numpy as np
+from django.core.management.base import BaseCommand, CommandError
+
+from clinical_ai.models import PatientClinicalRecord
+
+
+def _explicit_diabetes_label(record: PatientClinicalRecord) -> Optional[float]:
+    """Use explicit diagnosis status as federated target label."""
+    if record.diabetes_status == PatientClinicalRecord.DiabetesStatus.HAS:
+        return 1.0
+    if record.diabetes_status == PatientClinicalRecord.DiabetesStatus.HAS_NOT:
+        return 0.0
+    return None
+
+
+def _build_feature_row(record: PatientClinicalRecord, model_type: str) -> Optional[List[float]]:
+    payload: Dict[str, Optional[float]]
+    if model_type == "alex5050":
+        payload = record.alex5050_features()
+    else:
+        payload = record.mustafa_features()
+
+    if any(value is None for value in payload.values()):
+        return None
+
+    return [float(value) for value in payload.values()]
+
+
+class Command(BaseCommand):
+    help = "Train locally on clinic data and connect this Django instance as a Flower client."
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--model",
+            choices=["alex5050", "mustafa"],
+            default="alex5050",
+            help="Model architecture to train federated.",
+        )
+        parser.add_argument(
+            "--server-address",
+            default=os.getenv("FLOWER_SERVER_ADDRESS", "flower-server:8080"),
+            help="Flower server address (host:port). Defaults to FLOWER_SERVER_ADDRESS or flower-server:8080.",
+        )
+        parser.add_argument(
+            "--min-samples",
+            type=int,
+            default=1,
+            help="Minimum local samples required to start federated training.",
+        )
+        parser.add_argument(
+            "--test-split",
+            type=float,
+            default=0.2,
+            help="Fraction of local samples used for evaluation.",
+        )
+        parser.add_argument(
+            "--batch-size",
+            type=int,
+            default=32,
+            help="Batch size for local training.",
+        )
+        parser.add_argument(
+            "--sync-latest-model",
+            action="store_true",
+            help="Download the latest federated model from MinIO before training starts.",
+        )
+        parser.add_argument(
+            "--minio-endpoint",
+            default=os.getenv("MINIO_ENDPOINT", "localhost:9000"),
+            help="MinIO endpoint used when syncing the latest model.",
+        )
+        parser.add_argument(
+            "--minio-access-key",
+            default=os.getenv("MINIO_ACCESS_KEY", "minioadmin"),
+            help="MinIO access key used when syncing the latest model.",
+        )
+        parser.add_argument(
+            "--minio-secret-key",
+            default=os.getenv("MINIO_SECRET_KEY", "minioadmin"),
+            help="MinIO secret key used when syncing the latest model.",
+        )
+        parser.add_argument(
+            "--minio-use-ssl",
+            action="store_true",
+            default=os.getenv("MINIO_USE_SSL", "false").lower() == "true",
+            help="Use SSL when connecting to MinIO.",
+        )
+        parser.add_argument(
+            "--minio-bucket-name",
+            default=os.getenv("MINIO_BUCKET_NAME", "models"),
+            help="MinIO bucket that stores federated checkpoints.",
+        )
+
+    def handle(self, *args, **options):
+        try:
+            import flwr as fl
+        except ImportError as exc:
+            raise CommandError(
+                "flwr is not installed in this environment. Install federated dependencies first."
+            ) from exc
+
+        from clinical_ai.federated_client import create_client
+
+        model_type: str = options["model"]
+        server_address: str = options["server_address"]
+        min_samples: int = options["min_samples"]
+        test_split: float = options["test_split"]
+        batch_size: int = options["batch_size"]
+
+        if not (0.05 <= test_split <= 0.5):
+            raise CommandError("--test-split must be between 0.05 and 0.5")
+
+        if options["sync_latest_model"]:
+            try:
+                from clinical_ai.federated_model_sync import download_latest_model
+
+                synced_path = download_latest_model(
+                    model_type=model_type,
+                    bucket_name=options["minio_bucket_name"],
+                    endpoint=options["minio_endpoint"],
+                    access_key=options["minio_access_key"],
+                    secret_key=options["minio_secret_key"],
+                    use_ssl=options["minio_use_ssl"],
+                )
+                self.stdout.write(self.style.SUCCESS(f"Synced latest federated model to {synced_path}"))
+            except Exception as exc:
+                raise CommandError(f"Failed to sync latest federated model: {exc}") from exc
+
+        records = PatientClinicalRecord.objects.select_related("patient").all().order_by("id")
+
+        features: List[List[float]] = []
+        labels: List[float] = []
+
+        skipped_missing_features = 0
+        skipped_missing_label = 0
+        skipped_no_consent = 0
+
+        for record in records:
+            if not record.data_consent_for_training:
+                skipped_no_consent += 1
+                continue
+
+            row = _build_feature_row(record, model_type=model_type)
+            if row is None:
+                skipped_missing_features += 1
+                continue
+
+            label = _explicit_diabetes_label(record)
+            if label is None:
+                skipped_missing_label += 1
+                continue
+
+            features.append(row)
+            labels.append(label)
+
+        if len(features) < min_samples:
+            message = (
+                f"Not enough local samples for federated training: {len(features)} < {min_samples}. "
+                f"Skipped missing features: {skipped_missing_features}, "
+                f"skipped missing labels: {skipped_missing_label}, "
+                f"skipped no consent: {skipped_no_consent}."
+            )
+            if len(features) == 0:
+                self.stdout.write(self.style.WARNING(message))
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"No complete {model_type} records were found. Add a clinical record with all required "
+                        f"fields or switch to a model that matches the available data."
+                    )
+                )
+                return
+
+            raise CommandError(message)
+
+        x = np.asarray(features, dtype=np.float32)
+        y = np.asarray(labels, dtype=np.float32)
+
+        self.stdout.write(self.style.SUCCESS("Prepared local federated dataset"))
+        self.stdout.write(
+            f"Model: {model_type} | Samples: {len(x)} | "
+            f"Skipped features: {skipped_missing_features} | "
+            f"Skipped labels: {skipped_missing_label} | Skipped no consent: {skipped_no_consent}"
+        )
+        self.stdout.write(f"Connecting to Flower server: {server_address}")
+
+        client = create_client(
+            model_type=model_type,
+            local_data=(x, y),
+            test_split=test_split,
+            batch_size=batch_size,
+        )
+
+        fl.client.start_client(server_address=server_address, client=client.to_client())

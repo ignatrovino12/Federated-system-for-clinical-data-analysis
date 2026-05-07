@@ -1,3 +1,7 @@
 - when doctor makes an appointment it should not appear as notification for him
 - delete appointments when needed (or after completion) or make them expire
 - make the ai check for critical cases and anounce the doctors
+- age to be same in pacient list and ai data
+- add an explicit value for current patients and send the data only if it has been asigned (has or not diabetes)
+- minio storage and versioning for the central models
+- language english/ romana

@@ -10,6 +10,11 @@ from pubsub.models import Patient
 class PatientClinicalRecord(models.Model):
 	"""Clinical data used by the Alex5050 and Mustafa ML models."""
 
+	class DiabetesStatus(models.TextChoices):
+		HAS = "has", "Confirmed diabetes"
+		HAS_NOT = "has_not", "Confirmed no diabetes"
+		NOT_CONFIRMED = "not_confirmed", "Not confirmed"
+
 	class Gender(models.IntegerChoices):
 		FEMALE = 0, "Female"
 		MALE = 1, "Male"
@@ -130,6 +135,17 @@ class PatientClinicalRecord(models.Model):
 		choices=Income.choices,
 		null=True,
 		blank=True,
+	)
+
+	diabetes_status = models.CharField(
+		max_length=20,
+		choices=DiabetesStatus.choices,
+		default=DiabetesStatus.NOT_CONFIRMED,
+		help_text="Confirmed diabetes diagnosis status used as the federated label.",
+	)
+	data_consent_for_training = models.BooleanField(
+		default=False,
+		help_text="Whether the patient consented to use this data in federated training.",
 	)
 
 	notes = models.TextField(blank=True)

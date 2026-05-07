@@ -18,6 +18,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - healthcheck_federated_net
 
   # Redis for Celery
   redis:
@@ -30,14 +32,16 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - healthcheck_federated_net
 
   # Django Application
   web:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: docker/Dockerfile.ml
     container_name: healthcheck-web
-    command: python manage.py runserver 0.0.0.0:8000
+    command: sh -c "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"
     volumes:
       - ..:/app
     ports:
@@ -54,6 +58,9 @@ services:
       - DB_PORT=5432
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - FLOWER_SERVER_ADDRESS=${FLOWER_SERVER_ADDRESS:-flower-server:8080}
+    networks:
+      - healthcheck_federated_net
 
   # Celery Worker
   celery:
@@ -75,6 +82,9 @@ services:
       - DB_PORT=5432
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - FLOWER_SERVER_ADDRESS=${FLOWER_SERVER_ADDRESS:-flower-server:8080}
+    networks:
+      - healthcheck_federated_net
 
   # Celery Beat (for scheduled tasks)
   celery-beat:
@@ -96,6 +106,38 @@ services:
       - DB_PORT=5432
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - FLOWER_SERVER_ADDRESS=${FLOWER_SERVER_ADDRESS:-flower-server:8080}
+    networks:
+      - healthcheck_federated_net
+
+  # Federated client runner (uses Flower dependencies)
+  federated-client:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ml
+    command: sh -c "python manage.py migrate --noinput && python manage.py run_flower_client --model alex5050 --server-address ${FLOWER_SERVER_ADDRESS:-flower-server:8080} --min-samples ${FLOWER_MIN_SAMPLES:-1}"
+    volumes:
+      - ..:/app
+    env_file:
+      - ../.env
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - FLOWER_SERVER_ADDRESS=${FLOWER_SERVER_ADDRESS:-flower-server:8080}
+      - FLOWER_MIN_SAMPLES=${FLOWER_MIN_SAMPLES:-1}
+    networks:
+      - healthcheck_federated_net
+    profiles:
+      - federated
 
 volumes:
   postgres_data:
+
+networks:
+  healthcheck_federated_net:
+    external: true

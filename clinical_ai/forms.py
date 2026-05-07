@@ -86,6 +86,8 @@ class PatientClinicalRecordForm(forms.ModelForm):
             "diff_walk",
             "education",
             "income",
+            "diabetes_status",
+            "data_consent_for_training",
             "notes",
         ]
         widgets = {
@@ -114,6 +116,8 @@ class PatientClinicalRecordForm(forms.ModelForm):
             "diff_walk": forms.CheckboxInput(attrs={"class": "h-4 w-4 text-primary rounded"}),
             "education": forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}),
             "income": forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}),
+            "diabetes_status": forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}),
+            "data_consent_for_training": forms.CheckboxInput(attrs={"class": "h-4 w-4 text-primary rounded"}),
             "notes": forms.Textarea(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg", "rows": 4}),
         }
         labels = {
@@ -142,6 +146,8 @@ class PatientClinicalRecordForm(forms.ModelForm):
             "diff_walk": "Difficulty walking",
             "education": "Education level",
             "income": "Income level",
+            "diabetes_status": "Diabetes status",
+            "data_consent_for_training": "Consent to use data for federated training",
             "notes": "Clinical notes",
         }
 

@@ -1,11 +1,19 @@
 from functools import lru_cache
+import logging
 from pathlib import Path
+from typing import Optional, Tuple
 
 import joblib
 import pandas as pd
 import torch
 import torch.nn as nn
 
+from .federated_client import DiabetesNet as FederatedAlexDiabetesNet
+from .federated_client import MustafaNet as FederatedMustafaDiabetesNet
+from .federated_model_sync import get_local_federated_model_path
+
+
+logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 MODEL_ROOT = BASE_DIR / "machinelearning"
@@ -30,6 +38,51 @@ class AlexDiabetesNet(nn.Module):
 
     def forward(self, x):
         return self.net(x)
+
+
+def _file_signature(path: Path) -> Tuple[bool, Optional[float], Optional[int]]:
+    if not path.exists():
+        return (False, None, None)
+    stat_result = path.stat()
+    return (True, stat_result.st_mtime, stat_result.st_size)
+
+
+def _alex_model_signature() -> Tuple[Tuple[bool, Optional[float], Optional[int]], Tuple[bool, Optional[float], Optional[int]], Tuple[bool, Optional[float], Optional[int]]]:
+    model_dir = MODEL_ROOT / "alex5050_model_NN"
+    model_path = model_dir / "best_alex5050_model.pth"
+    federated_model_path = get_local_federated_model_path("alex5050")
+    scaler_path = model_dir / "alex5050_scaler.joblib"
+    return (_file_signature(federated_model_path), _file_signature(model_path), _file_signature(scaler_path))
+
+
+def _mustafa_model_signature() -> Tuple[
+    Tuple[bool, Optional[float], Optional[int]],
+    Tuple[bool, Optional[float], Optional[int]],
+    Tuple[bool, Optional[float], Optional[int]],
+    Tuple[bool, Optional[float], Optional[int]],
+]:
+    artifact_dirs = [MODEL_ROOT / "mustafa_model_NN", MODEL_ROOT / "mustafa_model"]
+    federated_model_path = get_local_federated_model_path("mustafa")
+    for artifact_dir in artifact_dirs:
+        if (artifact_dir / "scaler.joblib").exists():
+            model_path = artifact_dir / "mustafa_model.pth"
+            scaler_path = artifact_dir / "scaler.joblib"
+            metadata_path = artifact_dir / "metadata.json"
+            return (
+                _file_signature(federated_model_path),
+                _file_signature(model_path),
+                _file_signature(scaler_path),
+                _file_signature(metadata_path),
+            )
+    model_path = artifact_dirs[0] / "mustafa_model.pth"
+    scaler_path = artifact_dirs[0] / "scaler.joblib"
+    metadata_path = artifact_dirs[0] / "metadata.json"
+    return (
+        _file_signature(federated_model_path),
+        _file_signature(model_path),
+        _file_signature(scaler_path),
+        _file_signature(metadata_path),
+    )
 
 
 class MustafaDiabetesNet(nn.Module):
@@ -85,10 +138,11 @@ class MonotonicMustafaDiabetesNet(nn.Module):
         return base_logit + mono_logit + self.monotonic_bias
 
 
-@lru_cache(maxsize=1)
-def _load_alex_artifacts():
+@lru_cache(maxsize=4)
+def _load_alex_artifacts_cached(signature):
     model_dir = MODEL_ROOT / "alex5050_model_NN"
     model_path = model_dir / "best_alex5050_model.pth"
+    federated_model_path = get_local_federated_model_path("alex5050")
     scaler_path = model_dir / "alex5050_scaler.joblib"
 
     feature_columns = [
@@ -117,10 +171,17 @@ def _load_alex_artifacts():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     scaler = joblib.load(scaler_path)
-    model = AlexDiabetesNet(input_dim=len(feature_columns)).to(device)
-    state_dict = torch.load(model_path, map_location=device)
+    if federated_model_path.exists():
+        model = FederatedAlexDiabetesNet(input_size=len(feature_columns)).to(device)
+        state_dict = torch.load(federated_model_path, map_location=device)
+        source_path = federated_model_path
+    else:
+        model = AlexDiabetesNet(input_dim=len(feature_columns)).to(device)
+        state_dict = torch.load(model_path, map_location=device)
+        source_path = model_path
     model.load_state_dict(state_dict)
     model.eval()
+    logger.info("Loaded Alex model artifacts from %s", source_path)
     return {
         "feature_columns": feature_columns,
         "threshold": 0.37,
@@ -130,16 +191,29 @@ def _load_alex_artifacts():
     }
 
 
-@lru_cache(maxsize=1)
-def _load_mustafa_artifacts():
-    artifact_dirs = [MODEL_ROOT / "mustafa_model_NN", MODEL_ROOT / "mustafa_model"]
-    artifact_dir = next((path for path in artifact_dirs if (path / "mustafa_model.pth").exists()), None)
-    if artifact_dir is None:
-        raise FileNotFoundError("Could not find mustafa_model.pth in machinelearning/mustafa_model_NN or machinelearning/mustafa_model")
+def _load_alex_artifacts():
+    return _load_alex_artifacts_cached(_alex_model_signature())
 
-    model_path = artifact_dir / "mustafa_model.pth"
-    scaler_path = artifact_dir / "scaler.joblib"
-    metadata_path = artifact_dir / "metadata.json"
+
+@lru_cache(maxsize=4)
+def _load_mustafa_artifacts_cached(signature):
+    artifact_dirs = [MODEL_ROOT / "mustafa_model_NN", MODEL_ROOT / "mustafa_model"]
+    federated_model_path = get_local_federated_model_path("mustafa")
+    artifact_dir = None
+    if federated_model_path.exists():
+        artifact_dir = next((path for path in artifact_dirs if (path / "scaler.joblib").exists()), None)
+        if artifact_dir is None:
+            raise FileNotFoundError("Could not find scaler.joblib for mustafa artifacts")
+        model_path = federated_model_path
+        metadata_path = artifact_dir / "metadata.json"
+        scaler_path = artifact_dir / "scaler.joblib"
+    else:
+        artifact_dir = next((path for path in artifact_dirs if (path / "mustafa_model.pth").exists()), None)
+        if artifact_dir is None:
+            raise FileNotFoundError("Could not find mustafa_model.pth in machinelearning/mustafa_model_NN or machinelearning/mustafa_model")
+        model_path = artifact_dir / "mustafa_model.pth"
+        scaler_path = artifact_dir / "scaler.joblib"
+        metadata_path = artifact_dir / "metadata.json"
 
     import json
 
@@ -154,7 +228,9 @@ def _load_mustafa_artifacts():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     scaler = joblib.load(scaler_path)
     state_dict = torch.load(model_path, map_location=device)
-    if any(key.startswith("raw_monotonic_weights") for key in state_dict.keys()):
+    if model_path == federated_model_path:
+        model = FederatedMustafaDiabetesNet(input_size=len(feature_columns)).to(device)
+    elif any(key.startswith("raw_monotonic_weights") for key in state_dict.keys()):
         model = MonotonicMustafaDiabetesNet(
             input_dim=len(feature_columns),
             monotonic_feature_idx=monotonic_feature_idx,
@@ -170,6 +246,10 @@ def _load_mustafa_artifacts():
         "model": model,
         "device": device,
     }
+
+
+def _load_mustafa_artifacts():
+    return _load_mustafa_artifacts_cached(_mustafa_model_signature())
 
 
 def _validate_payload(payload, feature_columns):

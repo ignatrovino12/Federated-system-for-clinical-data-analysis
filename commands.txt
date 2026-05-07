@@ -1,0 +1,13 @@
+start training
+docker exec healthcheck-web python manage.py run_flower_client --model alex5050 --server-address flower-server:8080 --min-samples 1
+docker exec healthcheck-web python manage.py run_flower_client --model mustafa --server-address flower-server:8080 --min-samples 1
+
+
+sync changes  
+docker exec healthcheck-web python manage.py sync_federated_model --model alex5050 --endpoint minio:9000 --access-key minioadmin --secret-key minioadmin
+docker exec healthcheck-web python manage.py sync_federated_model --model mustafa --endpoint minio:9000 --access-key minioadmin --secret-key minioadmin
+
+
+clear cache
+docker exec healthcheck-web python manage.py clear_model_cache --model alex5050
+docker exec healthcheck-web python manage.py clear_model_cache

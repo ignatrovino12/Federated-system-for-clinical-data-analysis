@@ -13,7 +13,6 @@ from .forms import (
     PatientClinicalRecordForm,
 )
 from .models import PatientClinicalRecord
-from .services import predict_alex_probability, predict_mustafa_probability
 
 
 def get_user_profile(user):
@@ -104,6 +103,8 @@ def analysis_dashboard_view(request):
             alex_form = AlexManualAnalysisForm(request.POST, prefix="alex")
             if alex_form.is_valid():
                 try:
+                    from .services import predict_alex_probability
+
                     manual_result = {
                         "model_label": "Alex 5050 model",
                         "patient_label": None,
@@ -119,6 +120,8 @@ def analysis_dashboard_view(request):
             mustafa_form = MustafaManualAnalysisForm(request.POST, prefix="mustafa")
             if mustafa_form.is_valid():
                 try:
+                    from .services import predict_mustafa_probability
+
                     manual_result = {
                         "model_label": "Mustafa model",
                         "patient_label": None,
@@ -142,9 +145,13 @@ def analysis_dashboard_view(request):
                 else:
                     try:
                         if selected_model == "alex":
+                            from .services import predict_alex_probability
+
                             quick_result = predict_alex_probability(clinical_record.alex5050_features())
                             quick_result["model_label"] = "Alex 5050 model"
                         else:
+                            from .services import predict_mustafa_probability
+
                             quick_result = predict_mustafa_probability(clinical_record.mustafa_features())
                             quick_result["model_label"] = "Mustafa model"
 

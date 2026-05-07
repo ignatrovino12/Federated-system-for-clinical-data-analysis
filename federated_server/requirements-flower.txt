@@ -1,0 +1,15 @@
+# Federated Learning
+flwr==1.7.0
+
+# Machine Learning - PyTorch
+torch==2.7.0
+numpy==1.26.4
+
+# Storage
+minio==7.2.7
+
+# Utilities
+python-dotenv==1.1.0
+
+# Monitoring
+prometheus-client==0.20.0

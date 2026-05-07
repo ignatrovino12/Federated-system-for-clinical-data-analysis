@@ -1,0 +1,66 @@
+# Git
+.git
+.gitignore
+.github
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+.pytest_cache
+.coverage
+*.egg
+dist/
+build/
+.venv
+venv/
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Machine Learning artifacts 
+machinelearning/
+*.pth
+*.joblib
+*.pkl
+*.h5
+*.onnx
+
+# Database
+db.sqlite3
+*.db
+postgres_data/
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local
+celerybeat-schedule
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node modules (if any frontend build)
+node_modules/
+npm-debug.log
+
+# Docker files (don't include in context)
+docker/
+Dockerfile*
+
+# Separate Flower server project (built independently)
+federated_server/
+
+# Misc
+TODO.md
+*.md

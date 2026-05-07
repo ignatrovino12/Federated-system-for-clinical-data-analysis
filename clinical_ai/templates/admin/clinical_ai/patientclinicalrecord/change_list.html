@@ -1,0 +1,15 @@
+{% extends "admin/change_list.html" %}
+
+{% block object-tools-items %}
+  <li>
+    <a href="{% url 'admin:clinical_ai_patientclinicalrecord_run_federated_transfer' %}?model=alex5050&min_samples=1" class="addlink">
+      Show Federated Transfer Command (Alex)
+    </a>
+  </li>
+  <li>
+    <a href="{% url 'admin:clinical_ai_patientclinicalrecord_run_federated_transfer' %}?model=mustafa&min_samples=1" class="addlink">
+      Show Federated Transfer Command (Mustafa)
+    </a>
+  </li>
+  {{ block.super }}
+{% endblock %}
