@@ -11,3 +11,8 @@ docker exec healthcheck-web python manage.py sync_federated_model --model mustaf
 clear cache
 docker exec healthcheck-web python manage.py clear_model_cache --model alex5050
 docker exec healthcheck-web python manage.py clear_model_cache
+
+
+simulate client
+docker exec healthcheck-web python manage.py seed_training_data --count 100
+docker exec healthcheck-web python manage.py seed_training_data --count 100 --clear-existing

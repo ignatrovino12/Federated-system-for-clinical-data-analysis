@@ -8,3 +8,7 @@
 
 - model server should train from more clients (make it so it receives and keeps data and then trains)
   (also it has too much bias on the new weights)
+
+- make admin receive notification when done ( too many request blocks the training)
+
+- overfitting if using same inputs again and again - solve somehow

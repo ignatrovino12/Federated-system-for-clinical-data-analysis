@@ -1,0 +1,253 @@
+                                                         11.0s 
+PS C:\Users\ignat\OneDrive\Desktop\disertatie\cod\federated_server\docker> docker exec healthcheck-web python manage.py diagnose_flat_predictions --sample-size 200 --patients 10
+2026-05-11 14:46:33,531 - clinical_ai.services - INFO - Loaded Alex model artifacts from /app/machinelearning/alex5050_model_NN/latest.pt
+/usr/local/lib/python3.12/site-packages/sklearn/utils/validation.py:2732: UserWarning: X has feature names, but StandardScaler was fitted without feature names
+  warnings.warn(
+/usr/local/lib/python3.12/site-packages/sklearn/utils/validation.py:2732: UserWarning: X has feature names, but StandardScaler was fitted without feature names
+  warnings.warn(
+/usr/local/lib/python3.12/site-packages/sklearn/utils/validation.py:2732: UserWarning: X has feature names, but StandardScaler was fitted without feature names
+  warnings.warn(
+/usr/local/lib/python3.12/site-packages/sklearn/utils/validation.py:2732: UserWarning: X has feature names, but StandardScaler was fitted without feature names
+  warnings.warn(
+/usr/local/lib/python3.12/site-packages/sklearn/utils/validation.py:2732: UserWarning: X has feature names, but StandardScaler was fitted without feature names
+  warnings.warn(
+/usr/local/lib/python3.12/site-packages/sklearn/utils/validation.py:2732: UserWarning: X has feature names, but StandardScaler was fitted without feature names
+  warnings.warn(
+/usr/local/lib/python3.12/site-packages/sklearn/utils/validation.py:2732: UserWarning: X has feature names, but StandardScaler was fitted without feature names
+  warnings.warn(
+/usr/local/lib/python3.12/site-packages/sklearn/utils/validation.py:2732: UserWarning: X has feature names, but StandardScaler was fitted without feature names
+  warnings.warn(
+/usr/local/lib/python3.12/site-packages/sklearn/utils/validation.py:2732: UserWarning: X has feature names, but StandardScaler was fitted without feature names
+  warnings.warn(
+/usr/local/lib/python3.12/site-packages/sklearn/utils/validation.py:2732: UserWarning: X has feature names, but StandardScaler was fitted without feature names
+  warnings.warn(
+{
+  "alex": {
+    "feature_columns": [
+      "HighBP",
+      "HighChol",
+      "CholCheck",
+      "BMI",
+      "Smoker",
+      "Stroke",
+      "HeartDiseaseorAttack",
+      "PhysActivity",
+      "Fruits",
+      "Veggies",
+      "HvyAlcoholConsump",
+      "AnyHealthcare",
+      "NoDocbcCost",
+      "GenHlth",
+      "MentHlth",
+      "PhysHlth",
+      "DiffWalk",
+      "Sex",
+      "Age",
+      "Education",
+      "Income"
+    ],
+    "scaler_feature_names": null,
+    "outputs_probability": false,
+    "scaled_std": [
+      1.003341794013977,
+      0.9292949438095093,
+      2.305593252182007,
+      0.7841004729270935,
+      0.9627047181129456,
+      0.901643693447113,
+      1.0507880449295044,
+      1.0876497030258179,
+      1.013719916343689,
+      1.1835074424743652,
+      1.6083083152770996,
+      0.47361212968826294,
+      1.4063836336135864,
+      1.0451165437698364,
+      0.9510238170623779,
+      0.7314462065696716,
+      0.9321112036705017,
+      1.003485918045044,
+      1.1265618801116943,
+      1.599488377571106,
+      0.9976503849029541
+    ],
+    "scaled_overall_std": 1.2763314247131348,
+    "sample_logits": [
+      [
+        -0.81197589635849
+      ],
+      [
+        -1.2844157218933105
+      ],
+      [
+        -0.8111974596977234
+      ],
+      [
+        -0.1202155202627182
+      ],
+      [
+        -0.5120192170143127
+      ],
+      [
+        -1.7009003162384033
+      ],
+      [
+        -1.199636459350586
+      ],
+      [
+        -1.37319016456604
+      ],
+      [
+        -0.6708440780639648
+      ],
+      [
+        -2.000718593597412
+      ]
+    ],
+    "biases": {
+      "fc1.bias": {
+        "mean": -0.00793488323688507,
+        "first5": [
+          -0.1333847939968109,
+          0.08134175091981888,
+          0.09169311076402664,
+          -0.1250830888748169,
+          -0.10513417422771454
+        ]
+      },
+      "fc2.bias": {
+        "mean": -0.0042494055815041065,
+        "first5": [
+          -0.06428942829370499,
+          0.003929354250431061,
+          -0.019113343209028244,
+          -0.09734395146369934,
+          0.16512605547904968
+        ]
+      },
+      "fc3.bias": {
+        "mean": 0.035900652408599854,
+        "first5": [
+          0.0025892495177686214,
+          0.13877107203006744,
+          -0.13701307773590088,
+          -0.004651810508221388,
+          0.009475218132138252
+        ]
+      },
+      "fc4.bias": {
+        "mean": -0.18998509645462036,
+        "first5": [
+          -0.18998509645462036
+        ]
+      }
+    }
+  },
+  "mustafa": {
+    "feature_columns": [
+      "gender",
+      "age",
+      "hypertension",
+      "heart_disease",
+      "smoking_history",
+      "bmi",
+      "HbA1c_level",
+      "blood_glucose_level"
+    ],
+    "scaler_feature_names": [
+      "gender",
+      "age",
+      "hypertension",
+      "heart_disease",
+      "smoking_history",
+      "bmi",
+      "HbA1c_level",
+      "blood_glucose_level"
+    ],
+    "outputs_probability": false,
+    "scaled_std": [
+      1.014481782913208,
+      0.7094455361366272,
+      1.771427869796753,
+      1.9120558500289917,
+      1.2249490022659302,
+      0.8361672163009644,
+      1.616370677947998,
+      1.6185088157653809
+    ],
+    "scaled_overall_std": 1.5200594663619995,
+    "sample_logits": [
+      [
+        1.7122290134429932
+      ],
+      [
+        4.812348365783691
+      ],
+      [
+        0.16973412036895752
+      ],
+      [
+        3.8873465061187744
+      ],
+      [
+        2.0881035327911377
+      ],
+      [
+        -1.0215059518814087
+      ],
+      [
+        -1.1712433099746704
+      ],
+      [
+        3.6641244888305664
+      ],
+      [
+        0.2980732321739197
+      ],
+      [
+        -0.9119244813919067
+      ]
+    ],
+    "biases": {
+      "fc1.bias": {
+        "mean": 0.10959705710411072,
+        "first5": [
+          -0.16773296892642975,
+          -0.02617504633963108,
+          -0.024514952674508095,
+          0.32326987385749817,
+          -0.1890636533498764
+        ]
+      },
+      "fc2.bias": {
+        "mean": -0.03016267530620098,
+        "first5": [
+          -0.10943754762411118,
+          -0.12750302255153656,
+          -0.2047693431377411,
+          -0.05493158847093582,
+          -0.0687050074338913
+        ]
+      },
+      "fc3.bias": {
+        "mean": -0.2450706958770752,
+        "first5": [
+          -0.2450706958770752
+        ]
+      }
+    }
+  },
+  "label_counts": [
+    {
+      "diabetes_status": "has",
+      "c": 59
+    },
+    {
+      "diabetes_status": "not_confirmed",
+      "c": 28
+    },
+    {
+      "diabetes_status": "has_not",
+      "c": 15
+    }
+  ]

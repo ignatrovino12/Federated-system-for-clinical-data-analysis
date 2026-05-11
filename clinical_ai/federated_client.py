@@ -6,6 +6,7 @@ and send updated weights to the central Flower server.
 
 import logging
 from collections import OrderedDict
+from pathlib import Path
 from typing import Dict, List, Tuple, Union
 
 import flwr as fl
@@ -13,7 +14,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader, TensorDataset, WeightedRandomSampler
+import math
 
 logging.basicConfig(
     level=logging.INFO,
@@ -37,13 +39,12 @@ class DiabetesNet(nn.Module):
         self.relu3 = nn.ReLU()
         self.dropout3 = nn.Dropout(0.3)
         self.fc4 = nn.Linear(16, 1)
-        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.dropout1(self.relu1(self.fc1(x)))
         x = self.dropout2(self.relu2(self.fc2(x)))
         x = self.dropout3(self.relu3(self.fc3(x)))
-        return self.sigmoid(self.fc4(x))
+        return self.fc4(x)
 
 
 class MustafaNet(nn.Module):
@@ -58,12 +59,11 @@ class MustafaNet(nn.Module):
         self.relu2 = nn.ReLU()
         self.dropout2 = nn.Dropout(0.3)
         self.fc3 = nn.Linear(16, 1)
-        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.dropout1(self.relu1(self.fc1(x)))
         x = self.dropout2(self.relu2(self.fc2(x)))
-        return self.sigmoid(self.fc3(x))
+        return self.fc3(x)
 
 
 def get_weights(model: nn.Module) -> List[np.ndarray]:
@@ -85,7 +85,16 @@ def train(
 ) -> float:
     model.to(device)
     model.train()
-    criterion = nn.BCELoss()
+    # compute class imbalance from dataset labels and create pos-weight
+    try:
+        labels_tensor = train_loader.dataset.tensors[1]
+        num_pos = int((labels_tensor == 1).sum().item())
+        num_total = labels_tensor.size(0)
+        num_neg = num_total - num_pos
+        pos_weight = float(num_neg / num_pos) if num_pos > 0 else 1.0
+    except Exception:
+        pos_weight = 1.0
+    criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([pos_weight], device=device))
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
     total_loss = 0.0
@@ -127,9 +136,9 @@ def test(
             batch_x = batch_x.to(device)
             batch_y = batch_y.to(device).unsqueeze(1)
             output = model(batch_x)
-            loss = criterion(output, batch_y)
+            loss = nn.BCEWithLogitsLoss()(output, batch_y)
             total_loss += loss.item()
-            predictions = (output > 0.5).float()
+            predictions = (torch.sigmoid(output) > 0.5).float()
             correct += (predictions == batch_y).sum().item()
             total += batch_y.size(0)
 
@@ -184,6 +193,19 @@ def create_client(
     else:
         raise ValueError(f"Unknown model type: {model_type}")
 
+    # Try to load the latest saved model from disk; if not found, use freshly initialized model
+    from clinical_ai.federated_model_sync import get_local_federated_model_path
+    local_model_path = get_local_federated_model_path(model_type)
+    if local_model_path.exists():
+        try:
+            state_dict = torch.load(local_model_path, map_location="cpu")
+            model.load_state_dict(state_dict, strict=True)
+            logger.info(f"Loaded local federated model from {local_model_path}")
+        except Exception as e:
+            logger.warning(f"Failed to load local federated model from {local_model_path}: {e}. Using fresh model.")
+    else:
+        logger.info(f"No local federated model found at {local_model_path}. Using fresh model.")
+
     if local_data is None:
         logger.warning("No local data provided, creating dummy data")
         features = np.random.randn(100, input_size).astype(np.float32)
@@ -206,7 +228,14 @@ def create_client(
     train_dataset = TensorDataset(torch.from_numpy(train_x).float(), torch.from_numpy(train_y).float())
     test_dataset = TensorDataset(torch.from_numpy(test_x).float(), torch.from_numpy(test_y).float())
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    if len(train_y) > 0:
+        class_counts = np.bincount(train_y.astype(np.int64), minlength=2)
+        class_counts = np.maximum(class_counts, 1)
+        sample_weights = np.array([1.0 / class_counts[int(label)] for label in train_y], dtype=np.float32)
+        sampler = WeightedRandomSampler(weights=torch.from_numpy(sample_weights), num_samples=len(sample_weights), replacement=True)
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=sampler)
+    else:
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
     return FederatedClient(model, train_loader, test_loader)

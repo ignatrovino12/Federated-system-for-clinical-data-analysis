@@ -100,6 +100,13 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     return {"accuracy": sum(accuracies) / sum(examples)}
 
 
+def _fit_config(server_round: int) -> Dict[str, float]:
+    """Ask clients to do a little more local work so the update can move off the prior."""
+    if server_round <= 2:
+        return {"local_epochs": 5, "learning_rate": 0.005}
+    return {"local_epochs": 3, "learning_rate": 0.003}
+
+
 class FederatedStrategy(FedAvg):
     """
     Custom Flower strategy for federated learning with MinIO persistence.
@@ -266,12 +273,13 @@ def create_minio_client() -> Optional[Minio]:
 def create_strategy(minio_client: Optional[Minio] = None) -> FederatedStrategy:
     """Create and configure the federated learning strategy."""
     strategy = FederatedStrategy(
-        fraction_fit=0.1,  # Sample 10% of available clients per round
-        fraction_evaluate=0.05,  # Sample 5% for evaluation
+        fraction_fit=1.0,  # Sample a percentage of available clients per round (when a lot of clinics are available, we can reduce this to speed up rounds and reduce load)
+        fraction_evaluate=1.0,  # Sample percentage for evaluation to avoid overloading
         min_fit_clients=1,  # Minimum 1 client to start training
         min_evaluate_clients=1,  # Minimum 1 client for evaluation
         min_available_clients=1,  # Wait for at least 1 client
         evaluate_metrics_aggregation_fn=weighted_average,
+        on_fit_config_fn=_fit_config,
         minio_client=minio_client,
         bucket_name="models",
     )

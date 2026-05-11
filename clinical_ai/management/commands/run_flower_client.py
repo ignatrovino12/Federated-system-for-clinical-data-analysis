@@ -1,6 +1,8 @@
 import os
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+import joblib
 import numpy as np
 from django.core.management.base import BaseCommand, CommandError
 
@@ -27,6 +29,23 @@ def _build_feature_row(record: PatientClinicalRecord, model_type: str) -> Option
         return None
 
     return [float(value) for value in payload.values()]
+
+
+def _load_feature_scaler(model_type: str):
+    base_dir = Path(__file__).resolve().parents[3] / "machinelearning"
+    if model_type == "alex5050":
+        scaler_path = base_dir / "alex5050_model_NN" / "alex5050_scaler.joblib"
+    else:
+        candidate_paths = [
+            base_dir / "mustafa_model_NN" / "scaler.joblib",
+            base_dir / "mustafa_model" / "scaler.joblib",
+        ]
+        scaler_path = next((path for path in candidate_paths if path.exists()), candidate_paths[0])
+
+    if not scaler_path.exists():
+        raise CommandError(f"Could not find scaler for {model_type} at {scaler_path}")
+
+    return joblib.load(scaler_path)
 
 
 class Command(BaseCommand):
@@ -176,6 +195,8 @@ class Command(BaseCommand):
             raise CommandError(message)
 
         x = np.asarray(features, dtype=np.float32)
+        scaler = _load_feature_scaler(model_type)
+        x = scaler.transform(x).astype(np.float32)
         y = np.asarray(labels, dtype=np.float32)
 
         self.stdout.write(self.style.SUCCESS("Prepared local federated dataset"))

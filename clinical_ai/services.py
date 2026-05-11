@@ -171,14 +171,17 @@ def _load_alex_artifacts_cached(signature):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     scaler = joblib.load(scaler_path)
+    scaler_feature_names = getattr(scaler, "feature_names_in_", None)
     if federated_model_path.exists():
         model = FederatedAlexDiabetesNet(input_size=len(feature_columns)).to(device)
         state_dict = torch.load(federated_model_path, map_location=device)
         source_path = federated_model_path
+        outputs_probability = False
     else:
         model = AlexDiabetesNet(input_dim=len(feature_columns)).to(device)
         state_dict = torch.load(model_path, map_location=device)
         source_path = model_path
+        outputs_probability = False
     model.load_state_dict(state_dict)
     model.eval()
     logger.info("Loaded Alex model artifacts from %s", source_path)
@@ -186,8 +189,10 @@ def _load_alex_artifacts_cached(signature):
         "feature_columns": feature_columns,
         "threshold": 0.37,
         "scaler": scaler,
+        "scaler_feature_names": scaler_feature_names,
         "model": model,
         "device": device,
+        "outputs_probability": outputs_probability,
     }
 
 
@@ -227,24 +232,30 @@ def _load_mustafa_artifacts_cached(signature):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     scaler = joblib.load(scaler_path)
+    scaler_feature_names = getattr(scaler, "feature_names_in_", None)
     state_dict = torch.load(model_path, map_location=device)
     if model_path == federated_model_path:
         model = FederatedMustafaDiabetesNet(input_size=len(feature_columns)).to(device)
+        outputs_probability = False
     elif any(key.startswith("raw_monotonic_weights") for key in state_dict.keys()):
         model = MonotonicMustafaDiabetesNet(
             input_dim=len(feature_columns),
             monotonic_feature_idx=monotonic_feature_idx,
         ).to(device)
+        outputs_probability = False
     else:
         model = MustafaDiabetesNet(input_dim=len(feature_columns)).to(device)
+        outputs_probability = False
     model.load_state_dict(state_dict)
     model.eval()
     return {
         "feature_columns": feature_columns,
         "threshold": threshold,
         "scaler": scaler,
+        "scaler_feature_names": scaler_feature_names,
         "model": model,
         "device": device,
+        "outputs_probability": outputs_probability,
     }
 
 
@@ -258,16 +269,32 @@ def _validate_payload(payload, feature_columns):
         raise ValueError(f"Missing required inputs: {', '.join(missing)}")
 
 
+def _scale_payload_row(artifacts, payload, feature_columns):
+    row = pd.DataFrame([payload], columns=feature_columns).astype("float32")
+    scaler_feature_names = artifacts.get("scaler_feature_names")
+    if scaler_feature_names is None:
+        return artifacts["scaler"].transform(row.to_numpy(dtype="float32", copy=False))
+
+    return artifacts["scaler"].transform(row[list(scaler_feature_names)])
+
+
 def predict_alex_probability(payload):
     artifacts = _load_alex_artifacts()
     feature_columns = artifacts["feature_columns"]
-    _validate_payload(payload, feature_columns)
-    row = pd.DataFrame([payload], columns=feature_columns).astype("float32")
-    scaled = artifacts["scaler"].transform(row[feature_columns])
+    scaler_feature_names = artifacts.get("scaler_feature_names")
+    # prefer scaler's feature order if available
+    columns_to_use = list(scaler_feature_names) if scaler_feature_names is not None else feature_columns
+    if scaler_feature_names is not None and list(scaler_feature_names) != feature_columns:
+        logger.warning("Scaler was fitted with different feature names; reordering input columns to scaler order")
+    _validate_payload(payload, columns_to_use)
+    scaled = _scale_payload_row(artifacts, payload, columns_to_use)
 
     with torch.no_grad():
-        logits = artifacts["model"](torch.tensor(scaled, dtype=torch.float32).to(artifacts["device"]))
-        probability = torch.sigmoid(logits).cpu().numpy().ravel()[0]
+        model_output = artifacts["model"](torch.tensor(scaled, dtype=torch.float32).to(artifacts["device"]))
+        if artifacts["outputs_probability"]:
+            probability = model_output.cpu().numpy().ravel()[0]
+        else:
+            probability = torch.sigmoid(model_output).cpu().numpy().ravel()[0]
 
     return {
         "probability": float(probability),
@@ -280,13 +307,19 @@ def predict_alex_probability(payload):
 def predict_mustafa_probability(payload):
     artifacts = _load_mustafa_artifacts()
     feature_columns = artifacts["feature_columns"]
-    _validate_payload(payload, feature_columns)
-    row = pd.DataFrame([payload], columns=feature_columns).astype("float32")
-    scaled = artifacts["scaler"].transform(row[feature_columns])
+    scaler_feature_names = artifacts.get("scaler_feature_names")
+    columns_to_use = list(scaler_feature_names) if scaler_feature_names is not None else feature_columns
+    if scaler_feature_names is not None and list(scaler_feature_names) != feature_columns:
+        logger.warning("Scaler was fitted with different feature names; reordering input columns to scaler order")
+    _validate_payload(payload, columns_to_use)
+    scaled = _scale_payload_row(artifacts, payload, columns_to_use)
 
     with torch.no_grad():
-        logits = artifacts["model"](torch.tensor(scaled, dtype=torch.float32).to(artifacts["device"]))
-        probability = torch.sigmoid(logits).cpu().numpy().ravel()[0]
+        model_output = artifacts["model"](torch.tensor(scaled, dtype=torch.float32).to(artifacts["device"]))
+        if artifacts["outputs_probability"]:
+            probability = model_output.cpu().numpy().ravel()[0]
+        else:
+            probability = torch.sigmoid(model_output).cpu().numpy().ravel()[0]
 
     return {
         "probability": float(probability),
