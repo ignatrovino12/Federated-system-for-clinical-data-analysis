@@ -6,6 +6,7 @@ Orchestrates model training across distributed clients (patient devices/clinics)
 import logging
 import os
 import io
+from time import perf_counter
 from datetime import datetime
 from typing import Dict, Optional, Tuple, List
 
@@ -17,6 +18,13 @@ from flwr.common import Metrics, Parameters, parameters_to_ndarrays
 from flwr.server import ServerConfig
 from minio import Minio
 from minio.error import S3Error
+from prometheus_client import start_http_server
+
+from metrics import (
+    record_flower_checkpoint_failure,
+    record_flower_checkpoint_saved,
+    record_flower_round,
+)
 
 # Configure logging
 logging.basicConfig(
@@ -115,6 +123,14 @@ class FederatedStrategy(FedAvg):
     ) -> Tuple[Optional[Parameters], Dict]:
         """Aggregate model weights and save checkpoint to MinIO."""
         self.round_count = server_round
+        round_start = perf_counter()
+
+        model_name = "unknown"
+        if results:
+            try:
+                model_name = self._infer_model_name(parameters_to_ndarrays(results[0][1].parameters))
+            except Exception:
+                model_name = "unknown"
         
         logger.info(f"Round {server_round}: Received {len(results)} successful updates")
         if failures:
@@ -126,6 +142,14 @@ class FederatedStrategy(FedAvg):
         # Persist aggregated model to MinIO if available
         if self.minio_client and aggregated_params:
             self._save_checkpoint(server_round, aggregated_params)
+
+        record_flower_round(
+            model=model_name,
+            round_number=server_round,
+            clients=len(results),
+            duration_seconds=perf_counter() - round_start,
+            status="success" if aggregated_params else "no_aggregation",
+        )
         
         return aggregated_params, aggregated_metrics
 
@@ -169,6 +193,7 @@ class FederatedStrategy(FedAvg):
                     f"Round {round_num}: Parameter count mismatch for checkpoint save "
                     f"(received={len(ndarrays)}, expected={len(keys)})"
                 )
+                record_flower_checkpoint_failure(model_name, "parameter_mismatch")
                 return
 
             for key, arr in zip(keys, ndarrays):
@@ -201,11 +226,14 @@ class FederatedStrategy(FedAvg):
             logger.info(
                 f"Round {round_num}: Saved {model_name} checkpoint to MinIO: {versioned_object} and updated {latest_object}"
             )
+            record_flower_checkpoint_saved(model_name, round_num)
             
         except S3Error as e:
             logger.error(f"Round {round_num}: Failed to save checkpoint to MinIO: {e}")
+            record_flower_checkpoint_failure(model_name, "minio")
         except Exception as e:
             logger.error(f"Round {round_num}: Unexpected error saving checkpoint: {e}")
+            record_flower_checkpoint_failure(model_name, "unexpected")
 
 
 def create_minio_client() -> Optional[Minio]:
@@ -270,6 +298,10 @@ def start_server(
     logger.info(f"Number of Rounds: {num_rounds}")
     logger.info("Model Family: Auto-detected from client weights (Alex5050 or Mustafa)")
     logger.info("=" * 60)
+
+    prometheus_port = int(os.getenv("FLOWER_PROMETHEUS_PORT", 8001))
+    start_http_server(prometheus_port, addr="0.0.0.0")
+    logger.info(f"Prometheus metrics available on 0.0.0.0:{prometheus_port}/metrics")
     
     # Initialize MinIO client (optional)
     minio_client = create_minio_client()

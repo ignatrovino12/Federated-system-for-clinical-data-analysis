@@ -12,10 +12,12 @@ services:
       - ..:/app
     ports:
       - "8080:8080"
+      - "8001:8001"
     environment:
       - FLOWER_HOST=0.0.0.0
       - FLOWER_PORT=8080
       - FLOWER_ROUNDS=5
+      - FLOWER_PROMETHEUS_PORT=8001
       - MINIO_ENDPOINT=minio:9000
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
@@ -53,8 +55,43 @@ services:
       timeout: 20s
       retries: 3
 
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: healthcheck-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.console.libraries=/etc/prometheus/console_libraries
+      - --web.console.templates=/etc/prometheus/consoles
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - healthcheck_federated_net
+
+  grafana:
+    image: grafana/grafana-oss:11.1.4
+    container_name: healthcheck-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/healthcheck-monitoring.json
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    networks:
+      - healthcheck_federated_net
+
 volumes:
   minio_data:
+  prometheus_data:
+  grafana_data:
 
 networks:
   healthcheck_federated_net:

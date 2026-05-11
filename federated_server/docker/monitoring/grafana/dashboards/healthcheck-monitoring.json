@@ -1,0 +1,104 @@
+{
+  "uid": "healthcheck-monitoring",
+  "title": "Healthcheck Monitoring",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Django request rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROMETHEUS"
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(healthcheck_http_requests_total[5m])) by (view, method)"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Django p95 latency",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROMETHEUS"
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum(rate(healthcheck_http_request_duration_seconds_bucket[5m])) by (le, view))"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Clinical analysis requests",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROMETHEUS"
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(healthcheck_clinical_analysis_requests_total[1h])) by (model, mode, status)"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Flower round duration p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROMETHEUS"
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum(rate(healthcheck_flower_round_duration_seconds_bucket[5m])) by (le, model))"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Flower current round",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROMETHEUS"
+      },
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 16},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(healthcheck_flower_current_round)"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Last checkpoint round",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROMETHEUS"
+      },
+      "gridPos": {"h": 6, "w": 6, "x": 6, "y": 16},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(healthcheck_flower_last_checkpoint_round)"
+        }
+      ]
+    }
+  ]
+}

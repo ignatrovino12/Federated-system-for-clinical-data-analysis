@@ -6,6 +6,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from pubsub.models import AccessLog, Appointment, Patient, UserProfile
 
+from healthcheck.metrics import record_analysis_request
+
 from .forms import (
     AlexManualAnalysisForm,
     ClinicalAnalysisSelectionForm,
@@ -111,10 +113,13 @@ def analysis_dashboard_view(request):
                     }
                     manual_result.update(predict_alex_probability(alex_form.to_feature_payload()))
                     log_access(request.user, None, "search", request, details="Manual Alex 5050 analysis")
+                    record_analysis_request("alex5050", "manual", "success")
                 except ValueError as exc:
                     manual_error = str(exc)
+                    record_analysis_request("alex5050", "manual", "error")
             else:
                 manual_error = "Please complete all fields in the Alex 5050 section."
+                record_analysis_request("alex5050", "manual", "invalid_form")
 
         elif action == "manual_mustafa":
             mustafa_form = MustafaManualAnalysisForm(request.POST, prefix="mustafa")
@@ -128,20 +133,25 @@ def analysis_dashboard_view(request):
                     }
                     manual_result.update(predict_mustafa_probability(mustafa_form.to_feature_payload()))
                     log_access(request.user, None, "search", request, details="Manual Mustafa analysis")
+                    record_analysis_request("mustafa", "manual", "success")
                 except ValueError as exc:
                     manual_error = str(exc)
+                    record_analysis_request("mustafa", "manual", "error")
             else:
                 manual_error = "Please complete all fields in the Mustafa section."
+                record_analysis_request("mustafa", "manual", "invalid_form")
 
         elif action == "quick_patient":
             selection_form = ClinicalAnalysisSelectionForm(request.POST, prefix="selection", patient_queryset=accessible_patients)
             if selection_form.is_valid():
                 quick_patient = selection_form.cleaned_data["patient"]
                 selected_model = selection_form.cleaned_data["model"]
+                selected_model_name = "alex5050" if selected_model == "alex" else "mustafa"
                 clinical_record = PatientClinicalRecord.objects.filter(patient=quick_patient).first()
 
                 if clinical_record is None:
                     quick_error = "This patient does not have clinical data saved yet."
+                    record_analysis_request(selected_model_name, "quick", "missing_clinical_record")
                 else:
                     try:
                         if selected_model == "alex":
@@ -163,10 +173,13 @@ def analysis_dashboard_view(request):
                             request,
                             details=f"Ran {selected_model} analysis on stored clinical data",
                         )
+                        record_analysis_request(selected_model_name, "quick", "success")
                     except ValueError as exc:
                         quick_error = str(exc)
+                        record_analysis_request(selected_model_name, "quick", "error")
             else:
                 quick_error = "Please choose both a patient and a model."
+                record_analysis_request("unknown", "quick", "invalid_form")
 
     context = {
         "user_profile": profile,

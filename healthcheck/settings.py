@@ -30,7 +30,10 @@ SECRET_KEY = "django-insecure-@ujc&q=@w*e6hz2l9^2&a#5!&7$*ikn9hhn6%x&un)0)l!bwj&
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [host.strip() for host in os.getenv(
+    "ALLOWED_HOSTS",
+    "localhost,127.0.0.1,healthcheck-web,web,healthcheck-flower-server,flower-server",
+).split(",") if host.strip()]
 
 
 # Application definition
@@ -50,6 +53,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "healthcheck.middleware.PrometheusMetricsMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
