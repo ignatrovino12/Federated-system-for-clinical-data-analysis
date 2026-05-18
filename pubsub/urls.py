@@ -24,6 +24,7 @@ urlpatterns = [
     path('appointments/create/', views.appointment_create_view, name='appointment_create'),
     path('appointments/<int:appointment_id>/', views.appointment_detail_view, name='appointment_detail'),
     path('appointments/<int:appointment_id>/update-status/', views.appointment_update_status_view, name='appointment_update_status'),
+    path('appointments/<int:appointment_id>/delete/', views.appointment_delete_view, name='appointment_delete'),
     
     # AJAX endpoints
     path('ajax/search-patients/', views.appointment_search_patients_ajax, name='ajax_search_patients'),

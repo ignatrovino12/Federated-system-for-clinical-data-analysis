@@ -34,11 +34,6 @@ class PatientClinicalRecordAdmin(admin.ModelAdmin):
 		urls = super().get_urls()
 		custom_urls = [
 			path(
-				"run-federated-transfer/",
-				self.admin_site.admin_view(self.run_federated_transfer_view),
-				name="clinical_ai_patientclinicalrecord_run_federated_transfer",
-			),
-			path(
 				"sync-model/<str:model>/",
 				self.admin_site.admin_view(self.sync_model_view),
 				name="clinical_ai_patientclinicalrecord_sync_model",
@@ -63,46 +58,6 @@ class PatientClinicalRecordAdmin(admin.ModelAdmin):
 			except Exception as exc:
 				logger.exception("%s failed with args=%s: %s", command_name, kwargs, exc)
 		return _run
-
-	def run_federated_transfer_view(self, request: HttpRequest):
-		model = request.GET.get("model", "alex5050")
-		server_address = request.GET.get("server_address") or os.getenv(
-			"FLOWER_SERVER_ADDRESS", "flower-server:8080"
-		)
-		min_samples = int(request.GET.get("min_samples", 1))
-		test_split = float(request.GET.get("test_split", 0.2))
-		batch_size = int(request.GET.get("batch_size", 32))
-
-		if model not in {"alex5050", "mustafa"}:
-			self.message_user(request, "Invalid model type.", level=messages.ERROR)
-			return HttpResponseRedirect(self._changelist_url())
-
-		def _run_training():
-			try:
-				logger.info(
-					"Starting federated training via management command: model=%s server=%s min_samples=%s test_split=%s batch_size=%s",
-					model,
-					server_address,
-					min_samples,
-					test_split,
-					batch_size,
-				)
-				call_command(
-					"run_flower_client",
-					model=model,
-					server_address=server_address,
-					min_samples=min_samples,
-					test_split=test_split,
-					batch_size=batch_size,
-				)
-				logger.info("Federated training finished successfully for model=%s", model)
-			except Exception as exc:
-				logger.exception("Federated training failed for model=%s: %s", model, exc)
-
-		threading.Thread(target=_run_training, daemon=True).start()
-		self.message_user(request, f"Federated training for {model} started in background.", level=messages.SUCCESS)
-
-		return HttpResponseRedirect(self._changelist_url())
 
 	def sync_model_view(self, request: HttpRequest, model: str):
 		if model not in {"alex5050", "mustafa"}:

@@ -2,16 +2,6 @@
 
 {% block object-tools-items %}
   <li>
-    <a href="{% url 'admin:clinical_ai_patientclinicalrecord_run_federated_transfer' %}?model=alex5050&min_samples=1" class="addlink">
-      Train Alex5050 Now
-    </a>
-  </li>
-  <li>
-    <a href="{% url 'admin:clinical_ai_patientclinicalrecord_run_federated_transfer' %}?model=mustafa&min_samples=1" class="addlink">
-      Train Mustafa Now
-    </a>
-  </li>
-  <li>
     <a href="{% url 'admin:clinical_ai_patientclinicalrecord_sync_model' model='alex5050' %}" class="addlink">
       Sync Alex5050 Latest Model
     </a>

@@ -25,6 +25,14 @@ from metrics import (
     record_flower_checkpoint_saved,
     record_flower_round,
 )
+try:
+    from training_coordinator import TrainingCoordinator, start_control_server, start_weekly_scheduler
+except ImportError:
+    from flower_server.training_coordinator import (  # type: ignore
+        TrainingCoordinator,
+        start_control_server,
+        start_weekly_scheduler,
+    )
 
 # Configure logging
 logging.basicConfig(
@@ -307,12 +315,20 @@ def start_server(
     logger.info("Model Family: Auto-detected from client weights (Alex5050 or Mustafa)")
     logger.info("=" * 60)
 
+    control_port = int(os.getenv("FLOWER_CONTROL_PORT", 8081))
+    weekly_scheduler_enabled = os.getenv("FLOWER_WEEKLY_SCHEDULER_ENABLED", "true").lower() == "true"
+
     prometheus_port = int(os.getenv("FLOWER_PROMETHEUS_PORT", 8001))
     start_http_server(prometheus_port, addr="0.0.0.0")
     logger.info(f"Prometheus metrics available on 0.0.0.0:{prometheus_port}/metrics")
     
     # Initialize MinIO client (optional)
     minio_client = create_minio_client()
+
+    coordinator = TrainingCoordinator(minio_client=minio_client, bucket_name="models")
+    start_control_server(coordinator, host="0.0.0.0", port=control_port)
+    if weekly_scheduler_enabled:
+        start_weekly_scheduler(coordinator)
     
     # Create strategy with MinIO persistence; instruct it which final round to persist
     strategy = create_strategy(minio_client=minio_client)

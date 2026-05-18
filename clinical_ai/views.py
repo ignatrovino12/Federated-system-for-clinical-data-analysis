@@ -2,6 +2,7 @@ from functools import wraps
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
 from pubsub.models import AccessLog, Appointment, Patient, UserProfile
@@ -59,7 +60,10 @@ def can_access_patient(request_user, patient):
     if profile.role == "admin":
         return True, profile
     if profile.role == "doctor":
-        allowed = Appointment.objects.filter(doctor=request_user, patient=patient).exists()
+        allowed = (
+            patient.assigned_doctor_id == request_user.id
+            or Appointment.objects.filter(doctor=request_user, patient=patient).exists()
+        )
         return allowed, profile
     return False, profile
 
@@ -69,7 +73,9 @@ def get_accessible_patients(request_user, profile):
         return Patient.objects.all().order_by("nume", "prenume")
 
     return (
-        Patient.objects.filter(appointments__doctor=request_user)
+        Patient.objects.filter(
+            Q(appointments__doctor=request_user) | Q(assigned_doctor=request_user)
+        )
         .distinct()
         .order_by("nume", "prenume")
     )

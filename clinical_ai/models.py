@@ -170,10 +170,10 @@ class PatientClinicalRecord(models.Model):
 		return int(bool(value))
 
 	def _resolved_age_years(self):
-		if self.age_years is not None:
-			return self.age_years
 		if self.patient_id:
 			return self.patient.get_age()
+		if self.age_years is not None:
+			return self.age_years
 		return None
 
 	def _alex_age_category(self):

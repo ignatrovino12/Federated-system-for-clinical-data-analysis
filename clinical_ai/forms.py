@@ -58,9 +58,21 @@ INCOME_CHOICES = [
 
 
 class PatientClinicalRecordForm(forms.ModelForm):
+    patient_birth_date = forms.DateField(
+        required=True,
+        widget=forms.DateInput(
+            attrs={
+                "class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg",
+                "type": "date",
+            }
+        ),
+        label="Date of birth",
+    )
+
     class Meta:
         model = PatientClinicalRecord
         fields = [
+            "patient_birth_date",
             "gender",
             "age_years",
             "hypertension",
@@ -92,7 +104,7 @@ class PatientClinicalRecordForm(forms.ModelForm):
         ]
         widgets = {
             "gender": forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}),
-            "age_years": forms.NumberInput(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg", "min": 0, "max": 120}),
+            "age_years": forms.NumberInput(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-gray-100", "readonly": "readonly"}),
             "hypertension": forms.CheckboxInput(attrs={"class": "h-4 w-4 text-primary rounded"}),
             "heart_disease": forms.CheckboxInput(attrs={"class": "h-4 w-4 text-primary rounded"}),
             "smoking_history": forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}),
@@ -121,8 +133,9 @@ class PatientClinicalRecordForm(forms.ModelForm):
             "notes": forms.Textarea(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg", "rows": 4}),
         }
         labels = {
+            "patient_birth_date": "Date of birth",
             "gender": "Sex",
-            "age_years": "Age (years)",
+            "age_years": "Age (auto-calculated)",
             "hypertension": "High blood pressure",
             "heart_disease": "Heart disease",
             "smoking_history": "Smoking history",
@@ -150,6 +163,33 @@ class PatientClinicalRecordForm(forms.ModelForm):
             "data_consent_for_training": "Consent to use data for federated training",
             "notes": "Clinical notes",
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        patient = getattr(self.instance, "patient", None)
+        if patient and patient.data_nasterii:
+            self.fields["patient_birth_date"].initial = patient.data_nasterii
+            self.fields["age_years"].initial = patient.get_age()
+        elif self.instance and self.instance.age_years is not None:
+            self.fields["age_years"].initial = self.instance.age_years
+
+        self.fields["age_years"].required = False
+
+    def save(self, commit=True):
+        patient_birth_date = self.cleaned_data.get("patient_birth_date")
+        record = super().save(commit=False)
+
+        if record.patient_id and patient_birth_date:
+            patient = record.patient
+            if patient.data_nasterii != patient_birth_date:
+                patient.data_nasterii = patient_birth_date
+                patient.save(update_fields=["data_nasterii", "updated_at"])
+            record.age_years = patient.get_age()
+
+        if commit:
+            record.save()
+
+        return record
 
 
 class AlexManualAnalysisForm(forms.Form):

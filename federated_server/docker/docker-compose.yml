@@ -10,18 +10,27 @@ services:
     command: python -u flower_server/server.py
     volumes:
       - ..:/app
+    env_file:
+      - ./.env
     ports:
-      - "8080:8080"
-      - "8001:8001"
+      - "${FLOWER_PORT:-8080}:${FLOWER_PORT:-8080}"
+      - "${FLOWER_CONTROL_PORT:-8081}:${FLOWER_CONTROL_PORT:-8081}"
+      - "${FLOWER_PROMETHEUS_PORT:-8001}:${FLOWER_PROMETHEUS_PORT:-8001}"
     environment:
-      - FLOWER_HOST=0.0.0.0
-      - FLOWER_PORT=8080
-      - FLOWER_ROUNDS=5
-      - FLOWER_PROMETHEUS_PORT=8001
-      - MINIO_ENDPOINT=minio:9000
-      - MINIO_ACCESS_KEY=minioadmin
-      - MINIO_SECRET_KEY=minioadmin
-      - MINIO_USE_SSL=false
+      - FLOWER_HOST=${FLOWER_HOST:-0.0.0.0}
+      - FLOWER_PORT=${FLOWER_PORT:-8080}
+      - FLOWER_ROUNDS=${FLOWER_ROUNDS:-5}
+      - FLOWER_PROMETHEUS_PORT=${FLOWER_PROMETHEUS_PORT:-8001}
+      - FLOWER_CONTROL_PORT=${FLOWER_CONTROL_PORT:-8081}
+      - FLOWER_WEEKLY_SCHEDULER_ENABLED=${FLOWER_WEEKLY_SCHEDULER_ENABLED:-true}
+      - FLOWER_TRAINING_INTERVAL_SECONDS=${FLOWER_TRAINING_INTERVAL_SECONDS:-604800}
+      - FLOWER_MODEL_GAP_SECONDS=${FLOWER_MODEL_GAP_SECONDS:-120}
+      - FLOWER_SERVER_ADDRESS=${FLOWER_SERVER_ADDRESS:-flower-server:8080}
+      - FLOWER_TRAINING_CONTROL_OBJECT=${FLOWER_TRAINING_CONTROL_OBJECT:-control/training/latest.json}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
     networks:
       healthcheck_federated_net:
         aliases:
@@ -35,14 +44,14 @@ services:
       start_period: 20s
     restart: unless-stopped
   minio:
-    image: minio/minio:latest
+    image: minio/minio:${MINIO_IMAGE_TAG:-latest}
     container_name: minio-server
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     volumes:
       - minio_data:/data
       - ./minio.license:/root/.minio/license.lic
@@ -56,7 +65,7 @@ services:
       retries: 3
 
   prometheus:
-    image: prom/prometheus:v2.54.1
+    image: prom/prometheus:${PROMETHEUS_IMAGE_TAG:-v2.54.1}
     container_name: healthcheck-prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yml
@@ -67,16 +76,16 @@ services:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     ports:
-      - "9090:9090"
+      - "${PROMETHEUS_PORT:-9090}:9090"
     networks:
       - healthcheck_federated_net
 
   grafana:
-    image: grafana/grafana-oss:11.1.4
+    image: grafana/grafana-oss:${GRAFANA_IMAGE_TAG:-11.1.4}
     container_name: healthcheck-grafana
     environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/healthcheck-monitoring.json
     volumes:
@@ -84,7 +93,7 @@ services:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
     ports:
-      - "3000:3000"
+      - "${GRAFANA_PORT:-3000}:3000"
     networks:
       - healthcheck_federated_net
 

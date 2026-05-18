@@ -56,6 +56,18 @@
                         {% endif %}
                     </div>
                 </div>
+
+                <!-- Assignment Info -->
+                <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p class="text-sm text-blue-800 font-semibold mb-1">Assigned Doctor</p>
+                    <p class="text-blue-900">
+                        {% if patient.assigned_doctor %}
+                            Dr. {{ patient.assigned_doctor.get_full_name|default:patient.assigned_doctor.username }}
+                        {% else %}
+                            Not assigned
+                        {% endif %}
+                    </p>
+                </div>
                 
                 <!-- Personal Information -->
                 <div class="mb-6 pb-6 border-b-2 border-gray-200">

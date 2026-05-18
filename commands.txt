@@ -16,3 +16,8 @@ docker exec healthcheck-web python manage.py clear_model_cache
 simulate client
 docker exec healthcheck-web python manage.py seed_training_data --count 100
 docker exec healthcheck-web python manage.py seed_training_data --count 100 --clear-existing
+
+
+start aggregation
+python flower_server/trigger_training.py --control-url http://localhost:8081 --model alex5050
+python flower_server/trigger_training.py --control-url http://localhost:8081 --model mustafa

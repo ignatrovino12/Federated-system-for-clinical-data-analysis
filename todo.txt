@@ -1,14 +1,15 @@
 - when doctor makes an appointment it should not appear as notification for him
-- delete appointments when needed (or after completion) or make them expire
+* doctors when adding a patient they should see him in patient list
+* delete appointments when needed (or after completion) or make them expire , added celery task for expired appointments
+* age to be same in pacient list and ai data
 - make the ai check for critical cases and anounce the doctors
-- age to be same in pacient list and ai data
-- doctor, more 
 - language english/ romana
-
-
-- model server should train from more clients (make it so it receives and keeps data and then trains)
-  (also it has too much bias on the new weights)
-
-- make admin receive notification when done ( too many request blocks the training)
-
 - overfitting if using same inputs again and again - solve somehow
+
+-access control
+-TLS
+
+- model server should train from more clients - de testat
+
+- make the server ( which is single point of failure) safer
+- weights - reverse attack - to make security

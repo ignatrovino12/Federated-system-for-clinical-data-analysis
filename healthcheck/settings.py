@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 import os
+from datetime import timedelta
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -146,6 +147,12 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_BEAT_SCHEDULE = {
+    "expire-completed-appointments": {
+        "task": "pubsub.expire_completed_appointments",
+        "schedule": timedelta(minutes=max(1, int(os.getenv("APPOINTMENT_EXPIRY_CHECK_MINUTES", "5")))),
+    },
+}
 
 
 # Authentication Settings

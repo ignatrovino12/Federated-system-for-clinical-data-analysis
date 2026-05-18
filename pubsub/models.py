@@ -105,6 +105,17 @@ class Patient(models.Model):
     
     # Primary key 
     id = models.AutoField(primary_key=True)
+
+    # Ownership / assignment
+    assigned_doctor = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_patients',
+        limit_choices_to={'profile__role': 'doctor'},
+        help_text='Doctor responsible for this patient',
+    )
     
     # Personal identification
     CNP = models.CharField(
@@ -161,6 +172,7 @@ class Patient(models.Model):
         indexes = [
             models.Index(fields=['CNP']),
             models.Index(fields=['nume', 'prenume']),
+            models.Index(fields=['assigned_doctor', 'created_at']),
         ]
     
     def __str__(self):
@@ -213,6 +225,7 @@ class Appointment(models.Model):
         ('scheduled', 'Scheduled'),
         ('confirmed', 'Confirmed'),
         ('completed', 'Completed'),
+        ('expired', 'Expired'),
         ('cancelled', 'Cancelled'),
         ('no_show', 'No Show'),
     ]
@@ -236,6 +249,7 @@ class Appointment(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_appointments')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
     
     # Redis notification tracking
     notification_sent = models.BooleanField(default=False)
@@ -251,6 +265,7 @@ class Appointment(models.Model):
             models.Index(fields=['patient', 'appointment_date']),
             models.Index(fields=['doctor', 'appointment_date']),
             models.Index(fields=['status']),
+            models.Index(fields=['status', 'completed_at']),
         ]
         constraints = [
             models.UniqueConstraint(
@@ -310,7 +325,7 @@ class Appointment(models.Model):
         ).exclude(
             id=self.id
         ).exclude(
-            status__in=['cancelled', 'no_show']
+            status__in=['cancelled', 'no_show', 'completed', 'expired']
         )
 
         for other in overlapping_qs:

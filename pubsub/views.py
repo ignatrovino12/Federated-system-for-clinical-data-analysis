@@ -6,11 +6,13 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 from django.http import JsonResponse
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from functools import wraps
-from datetime import datetime, date, timedelta
+from datetime import datetime, date
 from .models import Patient, UserProfile, AccessLog, Appointment
 from .forms import PatientForm
 from .redis_pubsub import AppointmentNotifier
+from .appointment_lifecycle import expire_completed_appointments
 
 
 # UTILITY FUNCTIONS
@@ -54,6 +56,13 @@ def get_unread_appointments_count(user):
             notification_read=False
         ).count()
     return 0
+
+
+def doctor_has_patient_access(patient, doctor):
+    return (
+        patient.assigned_doctor_id == doctor.id
+        or Appointment.objects.filter(doctor=doctor, patient=patient).exists()
+    )
 
 
 def role_required(allowed_roles):
@@ -153,42 +162,45 @@ def profile_view(request):
 
 @login_required
 def patient_list_view(request):
-    """List patients with search functionality and masked data"""
+    """List patients with role-aware visibility and search behavior"""
     profile = get_user_profile(request.user)
     
     # Get search query
     search_query = request.GET.get('search', '').strip()
-    
-    # Start with no patients (search-first approach)
-    if search_query:
-        # Log search action with query details
-        log_access(request.user, None, 'search', request, details=f"Searched: {search_query}")
-        
-        # Search by name, CNP (partial), city, or county
-        patients = Patient.objects.filter(
-            Q(nume__icontains=search_query) |
-            Q(prenume__icontains=search_query) |
-            Q(CNP__icontains=search_query) |
-            Q(oras__icontains=search_query) |
-            Q(judet__icontains=search_query)
-        )
-        
-        # Doctors only see patients they have appointments with
-        if profile.role == 'doctor':
-            patients = patients.filter(
-                appointments__doctor=request.user
-            ).distinct()
-        
-        patients = patients.order_by('-created_at')
-    else:
-        patients = Patient.objects.none()
-    
-    # Calculate total patients based on role
+
     if profile.role == 'doctor':
-        total_patients = Patient.objects.filter(
-            appointments__doctor=request.user
-        ).distinct().count()
+        # Doctors should see patients assigned to them or linked through appointments.
+        patients = (
+            Patient.objects.filter(
+                Q(appointments__doctor=request.user) |
+                Q(assigned_doctor=request.user)
+            )
+            .distinct()
+            .order_by('prenume', 'nume')
+        )
+        if search_query:
+            log_access(request.user, None, 'search', request, details=f"Searched: {search_query}")
+            patients = patients.filter(
+                Q(nume__icontains=search_query) |
+                Q(prenume__icontains=search_query) |
+                Q(CNP__icontains=search_query) |
+                Q(oras__icontains=search_query) |
+                Q(judet__icontains=search_query)
+            )
+        total_patients = patients.count()
     else:
+        # Receptionists/admins keep the existing search-first workflow.
+        if search_query:
+            log_access(request.user, None, 'search', request, details=f"Searched: {search_query}")
+            patients = Patient.objects.filter(
+                Q(nume__icontains=search_query) |
+                Q(prenume__icontains=search_query) |
+                Q(CNP__icontains=search_query) |
+                Q(oras__icontains=search_query) |
+                Q(judet__icontains=search_query)
+            ).order_by('-created_at')
+        else:
+            patients = Patient.objects.none()
         total_patients = Patient.objects.count()
     
     context = {
@@ -197,6 +209,7 @@ def patient_list_view(request):
         'search_query': search_query,
         'user_profile': profile,
         'show_full_data': profile.can_view_full_data(),
+        'is_doctor_patient_list': profile.role == 'doctor',
         'unread_appointments_count': get_unread_appointments_count(request.user),
     }
     return render(request, 'patient/patient_list.html', context)
@@ -211,12 +224,8 @@ def patient_detail_view(request, patient_id):
     
     # Doctors can only view patients they have appointments with
     if profile.role == 'doctor':
-        has_appointment = Appointment.objects.filter(
-            doctor=request.user,
-            patient=patient
-        ).exists()
-        if not has_appointment:
-            messages.error(request, 'You do not have permission to view this patient. You can only view patients with whom you have appointments.')
+        if not doctor_has_patient_access(patient, request.user):
+            messages.error(request, 'You do not have permission to view this patient. You can only view patients assigned to you or with whom you have appointments.')
             return redirect('pubsub:patient_list')
     
     # Log view action with patient details 
@@ -246,10 +255,22 @@ def patient_add_view(request):
     if request.method == 'POST':
         form = PatientForm(request.POST)
         if form.is_valid():
-            patient = form.save()
+            patient = form.save(commit=False)
+            if profile.role == 'doctor':
+                patient.assigned_doctor = request.user
+            else:
+                patient.assigned_doctor = None
+            patient.save()
             # Log patient creation
-            log_access(request.user, patient, 'create', request, details=f"Created patient {patient.get_full_name()}")
-            messages.success(request, f'Patient {patient.get_full_name()} added successfully!')
+            if profile.role == 'doctor':
+                details = f"Created patient {patient.get_full_name()} and assigned to Dr. {request.user.get_full_name() or request.user.username}"
+                success_message = f'Patient {patient.get_full_name()} added and assigned to you successfully!'
+            else:
+                details = f"Created patient {patient.get_full_name()}"
+                success_message = f'Patient {patient.get_full_name()} added successfully!'
+
+            log_access(request.user, patient, 'create', request, details=details)
+            messages.success(request, success_message)
             return redirect('pubsub:patient_list')
         else:
             messages.error(request, 'Please correct the errors below.')
@@ -272,12 +293,8 @@ def patient_edit_view(request, patient_id):
     
     # Doctors can only edit patients they have appointments with
     if profile.role == 'doctor':
-        has_appointment = Appointment.objects.filter(
-            doctor=request.user,
-            patient=patient
-        ).exists()
-        if not has_appointment:
-            messages.error(request, 'You do not have permission to edit this patient. You can only edit patients with whom you have appointments.')
+        if not doctor_has_patient_access(patient, request.user):
+            messages.error(request, 'You do not have permission to edit this patient. You can only edit patients assigned to you or with whom you have appointments.')
             return redirect('pubsub:patient_list')
     
     if request.method == 'POST':
@@ -332,6 +349,7 @@ def patient_delete_view(request, patient_id):
 def appointment_list_view(request):
     """View all appointments with filtering"""
     profile = get_user_profile(request.user)
+    expire_completed_appointments()
     
     # Get base queryset based on role
     if profile.role == 'doctor':
@@ -436,6 +454,10 @@ def appointment_create_view(request):
                 notes=notes,
                 created_by=request.user
             )
+
+            if patient.assigned_doctor_id is None:
+                patient.assigned_doctor = doctor
+                patient.save(update_fields=['assigned_doctor'])
             
             # Send Redis notification
             try:
@@ -497,6 +519,7 @@ def appointment_create_view(request):
 @role_required(['admin', 'doctor', 'receptionist'])
 def appointment_detail_view(request, appointment_id):
     """View appointment details"""
+    expire_completed_appointments()
     appointment = get_object_or_404(Appointment, id=appointment_id)
     profile = get_user_profile(request.user)
     
@@ -528,6 +551,7 @@ def appointment_detail_view(request, appointment_id):
 @role_required(['admin', 'doctor'])
 def appointment_update_status_view(request, appointment_id):
     """Update appointment status"""
+    expire_completed_appointments()
     appointment = get_object_or_404(Appointment, id=appointment_id)
     profile = get_user_profile(request.user)
     
@@ -539,10 +563,18 @@ def appointment_update_status_view(request, appointment_id):
     if request.method == 'POST':
         new_status = request.POST.get('status')
         notes = request.POST.get('notes', '')
+
+        if new_status == 'expired':
+            messages.error(request, 'Expired status is set automatically by the system.')
+            return redirect('pubsub:appointment_detail', appointment_id=appointment.id)
         
         if new_status in dict(Appointment.STATUS_CHOICES):
             old_status = appointment.status
             appointment.status = new_status
+            if new_status == 'completed':
+                appointment.completed_at = timezone.now()
+            elif old_status == 'completed' and new_status != 'completed':
+                appointment.completed_at = None
             if notes:
                 appointment.notes = appointment.notes + f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M')}] {notes}"
             appointment.save()
@@ -563,6 +595,40 @@ def appointment_update_status_view(request, appointment_id):
             messages.error(request, 'Invalid status selected.')
     
     return redirect('pubsub:appointment_detail', appointment_id=appointment.id)
+
+
+@login_required
+@role_required(['admin', 'doctor'])
+def appointment_delete_view(request, appointment_id):
+    """Delete completed/expired appointments (admin or owning doctor)."""
+    expire_completed_appointments()
+    appointment = get_object_or_404(Appointment, id=appointment_id)
+    profile = get_user_profile(request.user)
+
+    if profile.role == 'doctor' and appointment.doctor != request.user:
+        messages.error(request, 'You do not have permission to delete this appointment.')
+        return redirect('pubsub:appointment_list')
+
+    if request.method != 'POST':
+        messages.error(request, 'Invalid request method.')
+        return redirect('pubsub:appointment_detail', appointment_id=appointment.id)
+
+    if appointment.status not in {'completed', 'expired'}:
+        messages.error(request, 'Only completed or expired appointments can be deleted.')
+        return redirect('pubsub:appointment_detail', appointment_id=appointment.id)
+
+    appointment_id_label = appointment.id
+    patient = appointment.patient
+    appointment.delete()
+    log_access(
+        request.user,
+        patient,
+        'delete',
+        request,
+        details=f"Deleted appointment #{appointment_id_label}",
+    )
+    messages.success(request, f'Appointment #{appointment_id_label} deleted successfully.')
+    return redirect('pubsub:appointment_list')
 
 
 @login_required
