@@ -48,6 +48,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "pubsub",
     "clinical_ai",
+    # Object-permission support
+    "guardian",
 ]
 
 MIDDLEWARE = [
@@ -159,4 +161,13 @@ CELERY_BEAT_SCHEDULE = {
 LOGIN_URL = 'pubsub:login'
 LOGIN_REDIRECT_URL = 'pubsub:dashboard'
 LOGOUT_REDIRECT_URL = 'pubsub:login'
+
+# django-guardian settings (object permissions)
+AUTHENTICATION_BACKENDS = (
+    "django.contrib.auth.backends.ModelBackend",
+    "guardian.backends.ObjectPermissionBackend",
+)
+
+# Disable anonymous user for guardian (use -1 to prevent creation)
+ANONYMOUS_USER_ID = -1
 

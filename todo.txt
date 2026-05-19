@@ -1,15 +1,16 @@
 - make the ai check for critical cases and anounce the doctors
-
-- language english/ romana
 - overfitting if using same inputs again and again - solve somehow
-- encrypt the mapping user - data
+- encrypt the mapping user - data ( hmac?)
+- language english/ romana
 
--access control
--TLS
+- test RBAC
+
+-+ TLS - needs changes when in production
 
 - model server should train from more clients - de testat
 
-- make the server ( which is single point of failure) safer
+Optional:
+- make the server ( which is single point of failure) safer (second server or other ways)
 - weights - reverse attack - to make security
 
 
@@ -18,3 +19,8 @@ Redis used for :
 notifications when appointments are assigned
 periodic deletion of appointments
 checking critical cases
+
+
+Access control rbac + djang oguardian
+python manage.py migrate
+python manage.py bootstrap_roles

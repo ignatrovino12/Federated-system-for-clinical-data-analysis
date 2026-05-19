@@ -51,7 +51,7 @@
             <div class="font-medium">My Profile</div>
         </a>
         
-        {% if user_profile.role in 'receptionist,admin,doctor' %}
+        {% if user.has_perm "pubsub.add_appointment" %}
         <a href="{% url 'pubsub:appointment_create' %}" 
            class="p-6 bg-gradient-to-r from-primary to-secondary text-white rounded-xl text-center hover:scale-105 transition-all duration-300 shadow-md">
             <div class="text-4xl mb-2">➕</div>

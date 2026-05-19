@@ -41,7 +41,7 @@
             </div>
             
             <!-- Doctor Selection -->
-            {% if user_profile.role == 'doctor' %}
+            {% if is_doctor_creator %}
             <!-- Doctors automatically assigned to their own appointments -->
             <div class="border-b-2 border-gray-200 pb-6">
                 <h3 class="text-xl font-semibold text-gray-800 mb-4">👨‍⚕️ Doctor</h3>

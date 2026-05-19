@@ -14,6 +14,13 @@ from .forms import PatientForm
 from .redis_pubsub import AppointmentNotifier
 from .appointment_lifecycle import expire_completed_appointments
 
+# Optional import for object permissions (django-guardian)
+try:
+    from guardian.shortcuts import assign_perm
+except Exception:  # pragma: no cover - guardian may not be installed yet
+    def assign_perm(perm, user, obj=None):
+        return None
+
 
 # UTILITY FUNCTIONS
 
@@ -49,13 +56,8 @@ def get_user_profile(user):
 
 def get_unread_appointments_count(user):
     """Get count of unread appointments for doctors"""
-    profile = get_user_profile(user)
-    if profile.role == 'doctor':
-        return Appointment.objects.filter(
-            doctor=user,
-            notification_read=False
-        ).count()
-    return 0
+    # Count unread appointments where the user is the doctor (works regardless of role flags)
+    return Appointment.objects.filter(doctor=user, notification_read=False).count()
 
 
 def doctor_has_patient_access(patient, doctor):
@@ -63,6 +65,21 @@ def doctor_has_patient_access(patient, doctor):
         patient.assigned_doctor_id == doctor.id
         or Appointment.objects.filter(doctor=doctor, patient=patient).exists()
     )
+
+
+def is_doctor_like(user):
+    """Heuristic: user is a doctor if they are assigned as doctor for any patient
+    or they are the doctor on any appointment. This preserves behavior without
+    relying on string role checks and works alongside permissions/groups."""
+    return Patient.objects.filter(assigned_doctor=user).exists() or Appointment.objects.filter(doctor=user).exists()
+
+
+def is_group_doctor(user):
+    """Detect doctor by group membership"""
+    try:
+        return user.groups.filter(name='doctor').exists()
+    except Exception:
+        return False
 
 
 def role_required(allowed_roles):
@@ -75,6 +92,45 @@ def role_required(allowed_roles):
                 messages.error(request, 'You do not have permission to access this resource.')
                 return redirect('pubsub:dashboard')
             return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
+def permission_required_or_role(perm, allowed_roles=None, obj_getter=None):
+    """Decorator: allow when user has `perm` (model or object) or when user's role is in allowed_roles.
+
+    - `perm` is the permission string, e.g. 'pubsub.change_patient'
+    - `obj_getter` is an optional callable(request, *args, **kwargs) -> object used for object-perm checks
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            user = request.user
+            # model-level permission
+            try:
+                if user.has_perm(perm):
+                    return view_func(request, *args, **kwargs)
+            except Exception:
+                # in case auth backend not ready
+                pass
+
+            # object-level permission if getter provided
+            if obj_getter is not None:
+                try:
+                    obj = obj_getter(request, *args, **kwargs)
+                    if user.has_perm(perm, obj):
+                        return view_func(request, *args, **kwargs)
+                except Exception:
+                    # lookup failed or guardian not installed — fallthrough to role check
+                    pass
+
+            profile = get_user_profile(request.user)
+            if allowed_roles and profile.role in allowed_roles:
+                return view_func(request, *args, **kwargs)
+
+            messages.error(request, 'You do not have permission to access this resource.')
+            return redirect('pubsub:dashboard')
+
         return wrapper
     return decorator
 
@@ -116,10 +172,11 @@ def dashboard_view(request):
     from .models import Patient
     
     profile = get_user_profile(request.user)
-    
+
     # Get appointment statistics
     today = date.today()
-    if profile.role == 'doctor':
+    # If the user is a practicing doctor (has appointments or assigned patients) show only own appointments
+    if is_doctor_like(request.user):
         appointments_query = Appointment.objects.filter(doctor=request.user)
     else:
         appointments_query = Appointment.objects.all()
@@ -164,11 +221,11 @@ def profile_view(request):
 def patient_list_view(request):
     """List patients with role-aware visibility and search behavior"""
     profile = get_user_profile(request.user)
-    
+
     # Get search query
     search_query = request.GET.get('search', '').strip()
 
-    if profile.role == 'doctor':
+    if is_doctor_like(request.user):
         # Doctors should see patients assigned to them or linked through appointments.
         patients = (
             Patient.objects.filter(
@@ -209,21 +266,25 @@ def patient_list_view(request):
         'search_query': search_query,
         'user_profile': profile,
         'show_full_data': profile.can_view_full_data(),
-        'is_doctor_patient_list': profile.role == 'doctor',
+        'is_doctor_patient_list': is_doctor_like(request.user),
         'unread_appointments_count': get_unread_appointments_count(request.user),
     }
     return render(request, 'patient/patient_list.html', context)
 
 
 @login_required
-@role_required(['admin', 'doctor', 'receptionist'])
+@permission_required_or_role(
+    'pubsub.view_patient',
+    allowed_roles=['admin', 'doctor', 'receptionist'],
+    obj_getter=lambda request, *a, **kw: get_object_or_404(Patient, id=kw.get('patient_id')),
+)
 def patient_detail_view(request, patient_id):
     """View full patient details with audit logging"""
     patient = get_object_or_404(Patient, id=patient_id)
     profile = get_user_profile(request.user)
     
-    # Doctors can only view patients they have appointments with
-    if profile.role == 'doctor':
+    # Doctors can only view patients they have appointments with (preserve existing business rule)
+    if is_doctor_like(request.user):
         if not doctor_has_patient_access(patient, request.user):
             messages.error(request, 'You do not have permission to view this patient. You can only view patients assigned to you or with whom you have appointments.')
             return redirect('pubsub:patient_list')
@@ -247,7 +308,7 @@ def patient_detail_view(request, patient_id):
 
 
 @login_required
-@role_required(['admin', 'doctor', 'receptionist'])
+@permission_required_or_role('pubsub.add_patient', allowed_roles=['admin', 'doctor', 'receptionist'])
 def patient_add_view(request):
     """Add a new patient"""
     profile = get_user_profile(request.user)
@@ -256,13 +317,21 @@ def patient_add_view(request):
         form = PatientForm(request.POST)
         if form.is_valid():
             patient = form.save(commit=False)
-            if profile.role == 'doctor':
+            if is_group_doctor(request.user):
                 patient.assigned_doctor = request.user
             else:
                 patient.assigned_doctor = None
             patient.save()
+            # Grant object-level permissions to assigned doctor (if guardian installed)
+            if patient.assigned_doctor_id is not None:
+                try:
+                    assign_perm('view_patient', patient.assigned_doctor, patient)
+                    assign_perm('change_patient', patient.assigned_doctor, patient)
+                    assign_perm('delete_patient', patient.assigned_doctor, patient)
+                except Exception:
+                    pass
             # Log patient creation
-            if profile.role == 'doctor':
+            if is_group_doctor(request.user):
                 details = f"Created patient {patient.get_full_name()} and assigned to Dr. {request.user.get_full_name() or request.user.username}"
                 success_message = f'Patient {patient.get_full_name()} added and assigned to you successfully!'
             else:
@@ -285,14 +354,18 @@ def patient_add_view(request):
 
 
 @login_required
-@role_required(['admin', 'doctor'])
+@permission_required_or_role(
+    'pubsub.change_patient',
+    allowed_roles=['admin', 'doctor'],
+    obj_getter=lambda request, *a, **kw: get_object_or_404(Patient, id=kw.get('patient_id')),
+)
 def patient_edit_view(request, patient_id):
     """Edit an existing patient (doctors and admins only)"""
     patient = get_object_or_404(Patient, id=patient_id)
     profile = get_user_profile(request.user)
     
     # Doctors can only edit patients they have appointments with
-    if profile.role == 'doctor':
+    if is_doctor_like(request.user):
         if not doctor_has_patient_access(patient, request.user):
             messages.error(request, 'You do not have permission to edit this patient. You can only edit patients assigned to you or with whom you have appointments.')
             return redirect('pubsub:patient_list')
@@ -319,7 +392,7 @@ def patient_edit_view(request, patient_id):
 
 
 @login_required
-@role_required(['admin'])
+@permission_required_or_role('pubsub.delete_patient', allowed_roles=['admin'])
 def patient_delete_view(request, patient_id):
     """Delete a patient (admins only)"""
     patient = get_object_or_404(Patient, id=patient_id)
@@ -345,14 +418,14 @@ def patient_delete_view(request, patient_id):
 # APPOINTMENT VIEWS
 
 @login_required
-@role_required(['admin', 'doctor', 'receptionist'])
+@permission_required_or_role('pubsub.view_appointment', allowed_roles=['admin', 'doctor', 'receptionist'])
 def appointment_list_view(request):
     """View all appointments with filtering"""
     profile = get_user_profile(request.user)
     expire_completed_appointments()
     
-    # Get base queryset based on role
-    if profile.role == 'doctor':
+    # Get base queryset based on whether user is a practicing doctor
+    if is_doctor_like(request.user):
         # Doctors only see their own appointments
         appointments = Appointment.objects.filter(doctor=request.user).select_related('patient', 'doctor', 'created_by')
     else:
@@ -380,10 +453,8 @@ def appointment_list_view(request):
     today_count = appointments.filter(appointment_date=today).count()
     upcoming_count = appointments.filter(appointment_date__gte=today, status__in=['scheduled', 'confirmed']).count()
     
-    # Unread notifications (for doctors only)
-    unread_count = 0
-    if profile.role == 'doctor':
-        unread_count = appointments.filter(notification_read=False).count()
+    # Unread notifications: count unread notifications where current user is the doctor
+    unread_count = appointments.filter(doctor=request.user, notification_read=False).count()
     
     context = {
         'appointments': appointments,
@@ -399,13 +470,14 @@ def appointment_list_view(request):
         },
         'status_choices': Appointment.STATUS_CHOICES,
         'unread_appointments_count': unread_count,
+        'is_doctor_like': is_doctor_like(request.user),
     }
     
     return render(request, 'appointment/appointment_list.html', context)
 
 
 @login_required
-@role_required(['admin', 'receptionist', 'doctor'])
+@permission_required_or_role('pubsub.add_appointment', allowed_roles=['admin', 'receptionist', 'doctor'])
 def appointment_create_view(request):
     """Create a new appointment"""
     profile = get_user_profile(request.user)
@@ -420,7 +492,7 @@ def appointment_create_view(request):
         notes = request.POST.get('notes', '')
         
         # Doctors can only create appointments for themselves
-        if profile.role == 'doctor':
+        if is_group_doctor(request.user):
             doctor_id = str(request.user.id)
         
         # Validate required fields
@@ -458,6 +530,13 @@ def appointment_create_view(request):
             if patient.assigned_doctor_id is None:
                 patient.assigned_doctor = doctor
                 patient.save(update_fields=['assigned_doctor'])
+                # assign object perms to doctor when auto-assigned during appointment creation
+                try:
+                    assign_perm('view_patient', doctor, patient)
+                    assign_perm('change_patient', doctor, patient)
+                    assign_perm('delete_patient', doctor, patient)
+                except Exception:
+                    pass
             
             # Send Redis notification when appointment is created, but only if doctor is different from creator.
             if appointment.created_by_id == appointment.doctor_id:
@@ -500,20 +579,21 @@ def appointment_create_view(request):
             return redirect('pubsub:appointment_create')
     
     # Get patients and doctors for selection
-    if profile.role == 'doctor':
+    if is_doctor_like(request.user):
         patients = Patient.objects.filter(
             Q(appointments__doctor=request.user) | Q(assigned_doctor=request.user)
         ).distinct().order_by('nume', 'prenume')[:50]
     else:
         patients = Patient.objects.all().order_by('nume', 'prenume')[:50]  # Limit for performance
     
-    doctors = User.objects.filter(profile__role='doctor').order_by('first_name', 'last_name')
+    doctors = User.objects.filter(groups__name='doctor').order_by('first_name', 'last_name')
     
     context = {
         'patients': patients,
         'doctors': doctors,
         'user_profile': profile,
         'unread_appointments_count': get_unread_appointments_count(request.user),
+        'is_doctor_creator': is_group_doctor(request.user),
     }
     
     return render(request, 'appointment/appointment_create.html', context)
@@ -528,12 +608,12 @@ def appointment_detail_view(request, appointment_id):
     profile = get_user_profile(request.user)
     
     # Check permissions
-    if profile.role == 'doctor' and appointment.doctor != request.user:
+    if is_doctor_like(request.user) and appointment.doctor != request.user:
         messages.error(request, 'You do not have permission to view this appointment.')
         return redirect('pubsub:appointment_list')
     
     # Mark as read for doctors
-    if profile.role == 'doctor' and not appointment.notification_read:
+    if is_doctor_like(request.user) and not appointment.notification_read:
         appointment.notification_read = True
         appointment.save(update_fields=['notification_read'])
     
@@ -544,7 +624,7 @@ def appointment_detail_view(request, appointment_id):
     context = {
         'appointment': appointment,
         'user_profile': profile,
-        'can_edit': profile.role in ['admin', 'doctor'],
+        'can_edit': (request.user.has_perm('pubsub.change_appointment') or is_doctor_like(request.user)),
         'unread_appointments_count': get_unread_appointments_count(request.user),
     }
     
@@ -552,15 +632,19 @@ def appointment_detail_view(request, appointment_id):
 
 
 @login_required
-@role_required(['admin', 'doctor'])
+@permission_required_or_role(
+    'pubsub.change_appointment',
+    allowed_roles=['admin', 'doctor'],
+    obj_getter=lambda request, *a, **kw: get_object_or_404(Appointment, id=kw.get('appointment_id')),
+)
 def appointment_update_status_view(request, appointment_id):
     """Update appointment status"""
     expire_completed_appointments()
     appointment = get_object_or_404(Appointment, id=appointment_id)
     profile = get_user_profile(request.user)
     
-    # Check permissions
-    if profile.role == 'doctor' and appointment.doctor != request.user:
+    # Check permissions: preserve doctor business rule using doctor-like heuristic
+    if is_doctor_like(request.user) and appointment.doctor != request.user:
         messages.error(request, 'You do not have permission to modify this appointment.')
         return redirect('pubsub:appointment_list')
     
@@ -602,14 +686,14 @@ def appointment_update_status_view(request, appointment_id):
 
 
 @login_required
-@role_required(['admin', 'doctor'])
+@permission_required_or_role('pubsub.delete_appointment', allowed_roles=['admin', 'doctor'])
 def appointment_delete_view(request, appointment_id):
     """Delete completed, expired, cancelled or no-show appointments"""
     expire_completed_appointments()
     appointment = get_object_or_404(Appointment, id=appointment_id)
     profile = get_user_profile(request.user)
 
-    if profile.role == 'doctor' and appointment.doctor != request.user:
+    if is_doctor_like(request.user) and appointment.doctor != request.user:
         messages.error(request, 'You do not have permission to delete this appointment.')
         return redirect('pubsub:appointment_list')
 

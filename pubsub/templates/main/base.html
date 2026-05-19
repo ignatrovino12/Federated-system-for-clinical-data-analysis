@@ -28,12 +28,12 @@
                 <div class="flex space-x-8">
                     <a href="{% url 'pubsub:dashboard' %}" class="text-gray-700 hover:text-primary transition-colors">Dashboard</a>
                     <a href="{% url 'pubsub:patient_list' %}" class="text-gray-700 hover:text-primary transition-colors">Patients</a>
-                    {% if user_profile.role == 'doctor' or user_profile.role == 'admin' %}
+                    {% if user.has_perm "pubsub.change_patient" or user.has_perm "pubsub.delete_patient" %}
                     <a href="{% url 'clinical_ai:analysis_dashboard' %}" class="text-gray-700 hover:text-primary transition-colors">AI Analysis</a>
                     {% endif %}
                     <a href="{% url 'pubsub:appointment_list' %}" class="relative text-gray-700 hover:text-primary transition-colors">
                         Appointments
-                        {% if user_profile.role == 'doctor' and unread_appointments_count > 0 %}
+                        {% if unread_appointments_count > 0 %}
                         <span class="absolute -top-1 -right-4 bg-red-500 text-white text-xs rounded-full px-2 py-0.5 font-bold animate-pulse">
                             {{ unread_appointments_count }}
                         </span>

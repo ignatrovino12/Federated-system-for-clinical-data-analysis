@@ -16,3 +16,4 @@ requests==2.32.3
 # Monitoring
 prometheus-client==0.20.0
 django-prometheus==2.3.1
+django-guardian==2.4.0

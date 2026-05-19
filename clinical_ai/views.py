@@ -6,6 +6,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
 from pubsub.models import AccessLog, Appointment, Patient, UserProfile
+from pubsub.views import permission_required_or_role, is_doctor_like, is_group_doctor
 
 from healthcheck.metrics import record_analysis_request
 
@@ -57,20 +58,30 @@ def log_access(user, patient, action, request, details=""):
 
 def can_access_patient(request_user, patient):
     profile = get_user_profile(request_user)
-    if profile.role == "admin":
-        return True, profile
-    if profile.role == "doctor":
+    # Admins by group membership have full access
+    try:
+        if request_user.groups.filter(name='admin').exists():
+            return True, profile
+    except Exception:
+        pass
+
+    # Doctors may access patients assigned to them or where they have appointments
+    if is_group_doctor(request_user) or is_doctor_like(request_user):
         allowed = (
             patient.assigned_doctor_id == request_user.id
             or Appointment.objects.filter(doctor=request_user, patient=patient).exists()
         )
         return allowed, profile
+
     return False, profile
 
 
 def get_accessible_patients(request_user, profile):
-    if profile.role == "admin":
-        return Patient.objects.all().order_by("nume", "prenume")
+    try:
+        if request_user.groups.filter(name='admin').exists():
+            return Patient.objects.all().order_by("nume", "prenume")
+    except Exception:
+        pass
 
     return (
         Patient.objects.filter(
@@ -82,14 +93,12 @@ def get_accessible_patients(request_user, profile):
 
 
 def get_unread_appointments_count(user):
-    profile = get_user_profile(user)
-    if profile.role == "doctor":
-        return Appointment.objects.filter(doctor=user, notification_read=False).count()
-    return 0
+    # Count unread appointments where the user is the doctor
+    return Appointment.objects.filter(doctor=user, notification_read=False).count()
 
 
 @login_required
-@role_required(["admin", "doctor"])
+@permission_required_or_role('pubsub.view_patient', allowed_roles=['admin', 'doctor'])
 def analysis_dashboard_view(request):
     profile = get_user_profile(request.user)
     accessible_patients = get_accessible_patients(request.user, profile)
@@ -203,6 +212,7 @@ def analysis_dashboard_view(request):
 
 
 @login_required
+@permission_required_or_role('pubsub.change_patient', allowed_roles=['admin', 'doctor'], obj_getter=lambda request, *a, **kw: get_object_or_404(Patient, id=kw.get('patient_id')))
 def patient_medical_data_view(request, patient_id):
     patient = get_object_or_404(Patient, id=patient_id)
     allowed, profile = can_access_patient(request.user, patient)
@@ -234,8 +244,8 @@ def patient_medical_data_view(request, patient_id):
             "form": form,
             "user_profile": profile,
             "clinical_record": clinical_record,
-            "can_edit": profile.role in ["admin", "doctor"],
-            "unread_appointments_count": 0 if profile.role != "doctor" else Appointment.objects.filter(doctor=request.user, notification_read=False).count(),
+            "can_edit": (request.user.has_perm('pubsub.change_patient') or is_doctor_like(request.user)),
+            "unread_appointments_count": Appointment.objects.filter(doctor=request.user, notification_read=False).count(),
         },
     )
 
