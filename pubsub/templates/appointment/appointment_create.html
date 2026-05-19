@@ -36,11 +36,7 @@
                         </option>
                         {% endfor %}
                     </select>
-                    {% if user_profile.role == 'doctor' %}
-                    <p class="text-sm text-blue-600 mt-1">You can only create appointments for patients you already have appointments with</p>
-                    {% else %}
-                    <p class="text-sm text-gray-500 mt-1">Can't find the patient? <a href="{% url 'pubsub:patient_add' %}" class="text-primary hover:underline">Add new patient</a></p>
-                    {% endif %}
+            
                 </div>
             </div>
             
@@ -54,7 +50,6 @@
                         <span class="font-medium">Assigned Doctor:</span> 
                         Dr. {{ user.get_full_name|default:user.username }}
                     </p>
-                    <p class="text-sm text-blue-600 mt-1">You are creating this appointment for yourself</p>
                 </div>
             </div>
             {% else %}

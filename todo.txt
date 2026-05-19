@@ -1,10 +1,8 @@
-- when doctor makes an appointment it should not appear as notification for him
-* doctors when adding a patient they should see him in patient list
-* delete appointments when needed (or after completion) or make them expire , added celery task for expired appointments
-* age to be same in pacient list and ai data
 - make the ai check for critical cases and anounce the doctors
+
 - language english/ romana
 - overfitting if using same inputs again and again - solve somehow
+- encrypt the mapping user - data
 
 -access control
 -TLS
@@ -13,3 +11,10 @@
 
 - make the server ( which is single point of failure) safer
 - weights - reverse attack - to make security
+
+
+
+Redis used for :
+notifications when appointments are assigned
+periodic deletion of appointments
+checking critical cases

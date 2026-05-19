@@ -459,14 +459,19 @@ def appointment_create_view(request):
                 patient.assigned_doctor = doctor
                 patient.save(update_fields=['assigned_doctor'])
             
-            # Send Redis notification
-            try:
-                notifier = AppointmentNotifier()
-                notifier.publish_appointment_created(appointment)
+            # Send Redis notification when appointment is created, but only if doctor is different from creator.
+            if appointment.created_by_id == appointment.doctor_id:
                 appointment.notification_sent = True
-                appointment.save(update_fields=['notification_sent'])
-            except Exception as e:
-                print(f"Redis notification failed: {e}")
+                appointment.notification_read = True
+                appointment.save(update_fields=['notification_sent', 'notification_read'])
+            else:
+                try:
+                    notifier = AppointmentNotifier()
+                    notifier.publish_appointment_created(appointment)
+                    appointment.notification_sent = True
+                    appointment.save(update_fields=['notification_sent'])
+                except Exception as e:
+                    print(f"Redis notification failed: {e}")
             
             # Log action
             log_access(request.user, patient, 'appointment_create', request, 
@@ -495,10 +500,9 @@ def appointment_create_view(request):
             return redirect('pubsub:appointment_create')
     
     # Get patients and doctors for selection
-    # Doctors can only create appointments for patients they already have appointments with
     if profile.role == 'doctor':
         patients = Patient.objects.filter(
-            appointments__doctor=request.user
+            Q(appointments__doctor=request.user) | Q(assigned_doctor=request.user)
         ).distinct().order_by('nume', 'prenume')[:50]
     else:
         patients = Patient.objects.all().order_by('nume', 'prenume')[:50]  # Limit for performance
@@ -600,7 +604,7 @@ def appointment_update_status_view(request, appointment_id):
 @login_required
 @role_required(['admin', 'doctor'])
 def appointment_delete_view(request, appointment_id):
-    """Delete completed/expired appointments (admin or owning doctor)."""
+    """Delete completed, expired, cancelled or no-show appointments"""
     expire_completed_appointments()
     appointment = get_object_or_404(Appointment, id=appointment_id)
     profile = get_user_profile(request.user)
@@ -613,8 +617,8 @@ def appointment_delete_view(request, appointment_id):
         messages.error(request, 'Invalid request method.')
         return redirect('pubsub:appointment_detail', appointment_id=appointment.id)
 
-    if appointment.status not in {'completed', 'expired'}:
-        messages.error(request, 'Only completed or expired appointments can be deleted.')
+    if appointment.status not in {'completed', 'expired', 'cancelled', 'no_show'}:
+        messages.error(request, 'Only completed, expired, cancelled, or no-show appointments can be deleted.')
         return redirect('pubsub:appointment_detail', appointment_id=appointment.id)
 
     appointment_id_label = appointment.id
