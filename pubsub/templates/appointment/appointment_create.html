@@ -1,20 +1,21 @@
 {% extends 'main/base.html' %}
+{% load i18n %}
 
-{% block title %}Create Appointment - HealthCheck System{% endblock %}
+{% block title %}{% trans "Create Appointment - HealthCheck System" %}{% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto">
     <div class="mb-4">
         <a href="{% url 'pubsub:appointment_list' %}" 
            class="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
-            ← Back to Appointments
+            ← {% trans "Back to Appointments" %}
         </a>
     </div>
     
     <div class="bg-white rounded-2xl shadow-xl p-8">
         <div class="mb-8">
-            <h2 class="text-3xl font-bold text-primary mb-2">➕ Create New Appointment</h2>
-            <p class="text-gray-600">Schedule an appointment for a patient</p>
+            <h2 class="text-3xl font-bold text-primary mb-2">➕ {% trans "Create New Appointment" %}</h2>
+            <p class="text-gray-600">{% trans "Schedule an appointment for a patient" %}</p>
         </div>
         
         <form method="post" class="space-y-6">
@@ -22,14 +23,14 @@
             
             <!-- Patient Selection -->
             <div class="border-b-2 border-gray-200 pb-6">
-                <h3 class="text-xl font-semibold text-gray-800 mb-4">👤 Patient Information</h3>
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">👤 {% trans "Patient Information" %}</h3>
                 <div>
                     <label for="patient_id" class="block mb-2 text-gray-700 font-medium">
-                        Select Patient <span class="text-red-500">*</span>
+                        {% trans "Select Patient" %} <span class="text-red-500">*</span>
                     </label>
                     <select name="patient_id" id="patient_id" required
                             class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-primary transition-colors">
-                        <option value="">-- Select Patient --</option>
+                        <option value="">-- {% trans "Select Patient" %} --</option>
                         {% for patient in patients %}
                         <option value="{{ patient.id }}">
                             {{ patient.get_full_name }} (CNP: {{ patient.get_masked_cnp }})
@@ -44,7 +45,7 @@
             {% if is_doctor_creator %}
             <!-- Doctors automatically assigned to their own appointments -->
             <div class="border-b-2 border-gray-200 pb-6">
-                <h3 class="text-xl font-semibold text-gray-800 mb-4">👨‍⚕️ Doctor</h3>
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">👨‍⚕️ {% trans "Doctor" %}</h3>
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <p class="text-gray-700">
                         <span class="font-medium">Assigned Doctor:</span> 
@@ -54,10 +55,10 @@
             </div>
             {% else %}
             <div class="border-b-2 border-gray-200 pb-6">
-                <h3 class="text-xl font-semibold text-gray-800 mb-4">👨‍⚕️ Doctor Selection</h3>
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">👨‍⚕️ {% trans "Doctor Selection" %}</h3>
                 <div>
                     <label for="doctor_id" class="block mb-2 text-gray-700 font-medium">
-                        Select Doctor <span class="text-red-500">*</span>
+                        {% trans "Select Doctor" %} <span class="text-red-500">*</span>
                     </label>
                     <select name="doctor_id" id="doctor_id" required
                             class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-primary transition-colors">
@@ -74,11 +75,11 @@
             
             <!-- Appointment Schedule -->
             <div class="border-b-2 border-gray-200 pb-6">
-                <h3 class="text-xl font-semibold text-gray-800 mb-4">📅 Schedule</h3>
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">📅 {% trans "Schedule" %}</h3>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                         <label for="appointment_date" class="block mb-2 text-gray-700 font-medium">
-                            Date <span class="text-red-500">*</span>
+                            {% trans "Date" %} <span class="text-red-500">*</span>
                         </label>
                         <input type="date" name="appointment_date" id="appointment_date" required
                                min="{{ today|date:'Y-m-d' }}"
@@ -87,7 +88,7 @@
                     
                     <div>
                         <label for="appointment_time" class="block mb-2 text-gray-700 font-medium">
-                            Time <span class="text-red-500">*</span>
+                            {% trans "Time" %} <span class="text-red-500">*</span>
                         </label>
                         <select name="appointment_time" id="appointment_time" required
                                 class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-primary transition-colors">
@@ -98,7 +99,7 @@
                     
                     <div>
                         <label for="duration_minutes" class="block mb-2 text-gray-700 font-medium">
-                            Duration (minutes)
+                            {% trans "Duration (minutes)" %}
                         </label>
                         <select name="duration_minutes" id="duration_minutes"
                                 class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-primary transition-colors">
@@ -115,20 +116,20 @@
             
             <!-- Appointment Details -->
             <div class="pb-6">
-                <h3 class="text-xl font-semibold text-gray-800 mb-4">📝 Details</h3>
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">📝 {% trans "Details" %}</h3>
                 <div class="space-y-4">
                     <div>
-                        <label for="reason" class="block mb-2 text-gray-700 font-medium">
-                            Reason for Visit <span class="text-red-500">*</span>
+                            <label for="reason" class="block mb-2 text-gray-700 font-medium">
+                            {% trans "Reason for Visit" %} <span class="text-red-500">*</span>
                         </label>
                         <textarea name="reason" id="reason" required rows="3"
-                                  placeholder="E.g., Regular checkup, Follow-up consultation, Vaccination..."
+                                  placeholder="{% trans "E.g., Regular checkup, Follow-up consultation, Vaccination..." %}"
                                   class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-primary transition-colors"></textarea>
                     </div>
                     
                     <div>
                         <label for="notes" class="block mb-2 text-gray-700 font-medium">
-                            Additional Notes (Optional)
+                            {% trans "Additional Notes (Optional)" %}
                         </label>
                         <textarea name="notes" id="notes" rows="3"
                                   placeholder="Any additional information..."
@@ -141,11 +142,11 @@
             <div class="flex gap-4">
                 <button type="submit" 
                         class="flex-1 py-3 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-lg hover:-translate-y-1 transition-transform shadow-lg">
-                    ➕ Create Appointment
+                    ➕ {% trans "Create Appointment" %}
                 </button>
                 <a href="{% url 'pubsub:appointment_list' %}" 
                    class="flex-1 py-3 bg-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-400 transition-colors text-center">
-                    ❌ Cancel
+                    ❌ {% trans "Cancel" %}
                 </a>
             </div>
         </form>

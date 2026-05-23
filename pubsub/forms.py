@@ -1,6 +1,7 @@
 from django import forms
 from django.core.validators import RegexValidator
 from .models import Patient
+from django.utils.translation import gettext_lazy as _
 
 
 class PatientForm(forms.ModelForm):
@@ -117,15 +118,15 @@ class PatientForm(forms.ModelForm):
             }),
         }
         labels = {
-            'nume': 'Nume',
-            'prenume': 'Prenume',
-            'data_nasterii': 'Data Nașterii',
-            'nationalitate': 'Naționalitate',
-            'CNP': 'CNP (Cod Numeric Personal)',
-            'serie_ci': 'Serie CI',
-            'numar_ci': 'Număr CI',
-            'telefon': 'Telefon',
-            'email': 'Email',
-            'oras': 'Oraș',
-            'judet': 'Județ'
+            'nume': _('Last name'),
+            'prenume': _('First name'),
+            'data_nasterii': _('Date of birth'),
+            'nationalitate': _('Nationality'),
+            'CNP': _('CNP (Personal Numeric Code)'),
+            'serie_ci': _('ID series'),
+            'numar_ci': _('ID number'),
+            'telefon': _('Phone'),
+            'email': _('Email'),
+            'oras': _('City'),
+            'judet': _('County')
         }

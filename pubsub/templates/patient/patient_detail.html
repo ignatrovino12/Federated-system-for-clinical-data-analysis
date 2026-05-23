@@ -1,6 +1,7 @@
 {% extends 'main/base.html' %}
+{% load i18n %}
 
-{% block title %}Patient Details - {{ patient.get_full_name }}{% endblock %}
+{% block title %}{% blocktrans %}Patient Details - {{ patient.get_full_name }}{% endblocktrans %}{% endblock %}
 
 {% block content %}
 <div class="max-w-6xl mx-auto">
@@ -8,7 +9,7 @@
     <div class="mb-4">
         <a href="{% url 'pubsub:patient_list' %}" 
            class="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
-            ← Back to Patient List
+            ← {% trans "Back to Patient List" %}
         </a>
     </div>
     
@@ -18,11 +19,11 @@
             <span class="text-2xl mr-3">{% if show_full_data %}⚠️{% else %}🔒{% endif %}</span>
             <div>
                 {% if show_full_data %}
-                <p class="text-red-800 font-semibold">Viewing Full Medical Data</p>
-                <p class="text-sm text-red-700">This access has been logged. Handle patient information responsibly and in compliance with GDPR regulations.</p>
+                <p class="text-red-800 font-semibold">{% trans "Viewing Full Medical Data" %}</p>
+                <p class="text-sm text-red-700">{% trans "This access has been logged. Handle patient information responsibly and in compliance with GDPR regulations." %}</p>
                 {% else %}
-                <p class="text-yellow-800 font-semibold">Viewing Masked Patient Data</p>
-                <p class="text-sm text-yellow-700">Sensitive information is masked for privacy. Only doctors and admins can view full details. This access has been logged.</p>
+                <p class="text-yellow-800 font-semibold">{% trans "Viewing Masked Patient Data" %}</p>
+                <p class="text-sm text-yellow-700">{% trans "Sensitive information is masked for privacy. Only doctors and admins can view full details. This access has been logged." %}</p>
                 {% endif %}
             </div>
         </div>
@@ -34,24 +35,24 @@
             <div class="bg-white rounded-2xl shadow-xl p-8">
                 <div class="flex justify-between items-start mb-6">
                     <div>
-                        <h2 class="text-3xl font-bold text-primary mb-2">Patient Details</h2>
-                        <p class="text-gray-600">Full medical record information</p>
+                        <h2 class="text-3xl font-bold text-primary mb-2">{% trans "Patient Details" %}</h2>
+                        <p class="text-gray-600">{% trans "Full medical record information" %}</p>
                     </div>
                     <div class="flex gap-2">
                         {% if can_edit %}
                         <a href="{% url 'pubsub:patient_edit' patient.id %}" 
                            class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                            ✏️ Edit
+                            ✏️ {% trans "Edit" %}
                         </a>
                         <a href="{% url 'clinical_ai:patient_medical_data' patient.id %}"
                            class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-                            🩺 Medical Data
+                               🩺 {% trans "Medical Data" %}
                         </a>
                         {% endif %}
                         {% if can_delete %}
                         <a href="{% url 'pubsub:patient_delete' patient.id %}" 
                            class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
-                            🗑️ Delete
+                            🗑️ {% trans "Delete" %}
                         </a>
                         {% endif %}
                     </div>
@@ -59,30 +60,30 @@
 
                 <!-- Assignment Info -->
                 <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p class="text-sm text-blue-800 font-semibold mb-1">Assigned Doctor</p>
+                    <p class="text-sm text-blue-800 font-semibold mb-1">{% trans "Assigned Doctor" %}</p>
                     <p class="text-blue-900">
                         {% if patient.assigned_doctor %}
                             Dr. {{ patient.assigned_doctor.get_full_name|default:patient.assigned_doctor.username }}
                         {% else %}
-                            Not assigned
+                            {% trans "Not assigned" %}
                         {% endif %}
                     </p>
                 </div>
                 
                 <!-- Personal Information -->
                 <div class="mb-6 pb-6 border-b-2 border-gray-200">
-                    <h3 class="text-xl font-semibold text-gray-800 mb-4">📋 Personal Information</h3>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">📋 {% trans "Personal Information" %}</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <p class="text-sm text-gray-500">First Name</p>
+                            <p class="text-sm text-gray-500">{% trans "First Name" %}</p>
                             <p class="text-lg font-medium text-gray-900">{{ patient.prenume }}</p>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500">Last Name</p>
+                            <p class="text-sm text-gray-500">{% trans "Last Name" %}</p>
                             <p class="text-lg font-medium text-gray-900">{{ patient.nume }}</p>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500">Date of Birth / Age</p>
+                            <p class="text-sm text-gray-500">{% trans "Date of Birth / Age" %}</p>
                             <p class="text-lg font-medium text-gray-900">
                                 {% if show_full_data %}
                                     {{ patient.data_nasterii|date:"d M Y" }} ({{ patient.get_age }} years)
@@ -92,7 +93,7 @@
                             </p>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500">Nationality</p>
+                            <p class="text-sm text-gray-500">{% trans "Nationality" %}</p>
                             <p class="text-lg font-medium text-gray-900">{{ patient.nationalitate }}</p>
                         </div>
                     </div>
@@ -100,10 +101,10 @@
                 
                 <!-- Identity Document -->
                 <div class="mb-6 pb-6 border-b-2 border-gray-200">
-                    <h3 class="text-xl font-semibold text-gray-800 mb-4">📄 Identity Document</h3>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">📄 {% trans "Identity Document" %}</h3>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div class="md:col-span-3">
-                            <p class="text-sm text-gray-500">CNP (Cod Numeric Personal)</p>
+                            <p class="text-sm text-gray-500">{% trans "CNP (Cod Numeric Personal)" %}</p>
                             <p class="text-lg font-medium text-gray-900 font-mono">
                                 {% if show_full_data %}
                                     {{ patient.CNP }}
@@ -114,7 +115,7 @@
                             </p>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500">ID Card Series</p>
+                            <p class="text-sm text-gray-500">{% trans "ID Card Series" %}</p>
                             <p class="text-lg font-medium text-gray-900 font-mono">
                                 {% if show_full_data %}
                                     {{ patient.serie_ci }}
@@ -124,7 +125,7 @@
                             </p>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500">ID Card Number</p>
+                            <p class="text-sm text-gray-500">{% trans "ID Card Number" %}</p>
                             <p class="text-lg font-medium text-gray-900 font-mono">
                                 {% if show_full_data %}
                                     {{ patient.numar_ci }}
@@ -135,7 +136,7 @@
                             </p>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500">Full ID</p>
+                            <p class="text-sm text-gray-500">{% trans "Full ID" %}</p>
                             <p class="text-lg font-medium text-gray-900 font-mono">
                                 {% if show_full_data %}
                                     {{ patient.serie_ci }} {{ patient.numar_ci }}
@@ -149,10 +150,10 @@
                 
                 <!-- Contact Information -->
                 <div class="mb-6 pb-6 border-b-2 border-gray-200">
-                    <h3 class="text-xl font-semibold text-gray-800 mb-4">📞 Contact Information</h3>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">📞 {% trans "Contact Information" %}</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <p class="text-sm text-gray-500">Phone Number</p>
+                            <p class="text-sm text-gray-500">{% trans "Phone Number" %}</p>
                             <p class="text-lg font-medium text-gray-900">
                                 {% if show_full_data %}
                                     {% if patient.telefon %}
@@ -169,7 +170,7 @@
                             </p>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500">Email Address</p>
+                            <p class="text-sm text-gray-500">{% trans "Email Address" %}</p>
                             <p class="text-lg font-medium text-gray-900">
                                 {% if show_full_data %}
                                     {% if patient.email %}
@@ -190,14 +191,14 @@
                 
                 <!-- Address -->
                 <div class="mb-6">
-                    <h3 class="text-xl font-semibold text-gray-800 mb-4">🏠 Address</h3>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">🏠 {% trans "Address" %}</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <p class="text-sm text-gray-500">City</p>
+                            <p class="text-sm text-gray-500">{% trans "City" %}</p>
                             <p class="text-lg font-medium text-gray-900">{{ patient.oras }}</p>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500">County</p>
+                            <p class="text-sm text-gray-500">{% trans "County" %}</p>
                             <p class="text-lg font-medium text-gray-900">{{ patient.judet }}</p>
                         </div>
                     </div>
@@ -209,8 +210,8 @@
         <!-- Audit Log Sidebar -->
         <div class="lg:col-span-1">
             <div class="bg-white rounded-2xl shadow-xl p-6">
-                <h3 class="text-xl font-semibold text-gray-800 mb-4">📊 Access Log</h3>
-                <p class="text-sm text-gray-600 mb-4">Recent access history for this patient</p>
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">📊 {% trans "Access Log" %}</h3>
+                <p class="text-sm text-gray-600 mb-4">{% trans "Recent access history for this patient" %}</p>
                 
                 {% if recent_logs %}
                 <div class="space-y-3">
@@ -233,20 +234,20 @@
                     {% endfor %}
                 </div>
                 {% else %}
-                <p class="text-sm text-gray-500 italic">No access logs available</p>
+                <p class="text-sm text-gray-500 italic">{% trans "No access logs available" %}</p>
                 {% endif %}
             </div>
             
             <!-- GDPR Notice -->
             <div class="mt-6 bg-purple-50 border border-purple-200 rounded-lg p-4">
-                <h4 class="text-sm font-semibold text-purple-900 mb-2">🔐 GDPR Compliance</h4>
+                <h4 class="text-sm font-semibold text-purple-900 mb-2">🔐 {% trans "GDPR Compliance" %}</h4>
                 <p class="text-xs text-purple-800">
-                    This patient has the right to:<br>
-                    • Access their data<br>
-                    • Request corrections<br>
-                    • Request deletion<br>
-                    • Data portability<br>
-                    • Restrict processing
+                    {% trans "This patient has the right to:" %}<br>
+                    • {% trans "Access their data" %}<br>
+                    • {% trans "Request corrections" %}<br>
+                    • {% trans "Request deletion" %}<br>
+                    • {% trans "Data portability" %}<br>
+                    • {% trans "Restrict processing" %}
                 </p>
             </div>
             

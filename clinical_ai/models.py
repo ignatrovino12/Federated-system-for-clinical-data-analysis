@@ -147,6 +147,15 @@ class PatientClinicalRecord(models.Model):
 		default=False,
 		help_text="Whether the patient consented to use this data in federated training.",
 	)
+	federated_train_count = models.PositiveIntegerField(
+		default=0,
+		help_text="How many federated rounds have used this record for local training.",
+	)
+	last_federated_train_at = models.DateTimeField(
+		null=True,
+		blank=True,
+		help_text="When this record was last used in federated local training.",
+	)
 
 	notes = models.TextField(blank=True)
 	recorded_at = models.DateTimeField(default=timezone.now)

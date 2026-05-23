@@ -1,3 +1,5 @@
+import importlib
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
@@ -9,14 +11,15 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from functools import wraps
 from datetime import datetime, date
-from .models import Patient, UserProfile, AccessLog, Appointment
+from .models import Patient, AccessLog, Appointment
+from .roles import get_role_info, has_any_role, is_in_group
 from .forms import PatientForm
 from .redis_pubsub import AppointmentNotifier
 from .appointment_lifecycle import expire_completed_appointments
 
 # Optional import for object permissions (django-guardian)
 try:
-    from guardian.shortcuts import assign_perm
+    assign_perm = importlib.import_module("guardian.shortcuts").assign_perm
 except Exception:  # pragma: no cover - guardian may not be installed yet
     def assign_perm(perm, user, obj=None):
         return None
@@ -46,12 +49,8 @@ def log_access(user, patient, action, request, details=""):
 
 
 def get_user_profile(user):
-    """Get or create user profile"""
-    profile, created = UserProfile.objects.get_or_create(
-        user=user,
-        defaults={'role': 'receptionist'}
-    )
-    return profile
+    """Return role metadata derived from auth groups."""
+    return get_role_info(user)
 
 
 def get_unread_appointments_count(user):
@@ -76,10 +75,7 @@ def is_doctor_like(user):
 
 def is_group_doctor(user):
     """Detect doctor by group membership"""
-    try:
-        return user.groups.filter(name='doctor').exists()
-    except Exception:
-        return False
+    return is_in_group(user, 'doctor')
 
 
 def role_required(allowed_roles):
@@ -88,7 +84,7 @@ def role_required(allowed_roles):
         @wraps(view_func)
         def wrapper(request, *args, **kwargs):
             profile = get_user_profile(request.user)
-            if profile.role not in allowed_roles:
+            if not has_any_role(request.user, allowed_roles):
                 messages.error(request, 'You do not have permission to access this resource.')
                 return redirect('pubsub:dashboard')
             return view_func(request, *args, **kwargs)
@@ -124,8 +120,7 @@ def permission_required_or_role(perm, allowed_roles=None, obj_getter=None):
                     # lookup failed or guardian not installed — fallthrough to role check
                     pass
 
-            profile = get_user_profile(request.user)
-            if allowed_roles and profile.role in allowed_roles:
+            if allowed_roles and has_any_role(request.user, allowed_roles):
                 return view_func(request, *args, **kwargs)
 
             messages.error(request, 'You do not have permission to access this resource.')
@@ -221,40 +216,46 @@ def profile_view(request):
 def patient_list_view(request):
     """List patients with role-aware visibility and search behavior"""
     profile = get_user_profile(request.user)
+    min_search_length = 3
 
     # Get search query
     search_query = request.GET.get('search', '').strip()
+    search_too_short = bool(search_query) and len(search_query) < min_search_length
 
     if is_doctor_like(request.user):
         # Doctors should see patients assigned to them or linked through appointments.
-        patients = (
-            Patient.objects.filter(
-                Q(appointments__doctor=request.user) |
-                Q(assigned_doctor=request.user)
-            )
-            .distinct()
-            .order_by('prenume', 'nume')
-        )
-        if search_query:
+        patients = Patient.objects.none()
+        if search_query and not search_too_short:
             log_access(request.user, None, 'search', request, details=f"Searched: {search_query}")
-            patients = patients.filter(
-                Q(nume__icontains=search_query) |
-                Q(prenume__icontains=search_query) |
-                Q(CNP__icontains=search_query) |
-                Q(oras__icontains=search_query) |
-                Q(judet__icontains=search_query)
+            patients = (
+                Patient.objects.filter(
+                    Q(appointments__doctor=request.user) |
+                    Q(assigned_doctor=request.user)
+                )
+                .filter(
+                    Q(nume__icontains=search_query) |
+                    Q(prenume__icontains=search_query)
+                )
+                .distinct()
+                .order_by('prenume', 'nume')
+            )
+        elif not search_query:
+            patients = (
+                Patient.objects.filter(
+                    Q(appointments__doctor=request.user) |
+                    Q(assigned_doctor=request.user)
+                )
+                .distinct()
+                .order_by('prenume', 'nume')
             )
         total_patients = patients.count()
     else:
         # Receptionists/admins keep the existing search-first workflow.
-        if search_query:
+        if search_query and not search_too_short:
             log_access(request.user, None, 'search', request, details=f"Searched: {search_query}")
             patients = Patient.objects.filter(
                 Q(nume__icontains=search_query) |
-                Q(prenume__icontains=search_query) |
-                Q(CNP__icontains=search_query) |
-                Q(oras__icontains=search_query) |
-                Q(judet__icontains=search_query)
+                Q(prenume__icontains=search_query)
             ).order_by('-created_at')
         else:
             patients = Patient.objects.none()
@@ -267,6 +268,8 @@ def patient_list_view(request):
         'user_profile': profile,
         'show_full_data': profile.can_view_full_data(),
         'is_doctor_patient_list': is_doctor_like(request.user),
+        'search_too_short': search_too_short,
+        'min_search_length': min_search_length,
         'unread_appointments_count': get_unread_appointments_count(request.user),
     }
     return render(request, 'patient/patient_list.html', context)

@@ -1,0 +1,278 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: healthcheck\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-23 00:00+0000\n"
+"PO-Revision-Date: 2026-05-23 00:00+0000\n"
+"Last-Translator: Translator <translator@example.com>\n"
+"Language-Team: Romanian\n"
+"Language: ro\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: pubsub/templates/main/base.html:12
+msgid "HealthCheck System"
+msgstr "Sistem HealthCheck"
+
+#: pubsub/templates/main/base.html:14
+msgid "Dashboard"
+msgstr "Tablou de bord"
+
+msgid "Patients"
+msgstr "Pacienți"
+
+msgid "AI Analysis"
+msgstr "Analiză AI"
+
+msgid "Appointments"
+msgstr "Programări"
+
+msgid "Profile"
+msgstr "Profil"
+
+msgid "Admin"
+msgstr "Administrare"
+
+msgid "Logout"
+msgstr "Deconectare"
+
+#: pubsub/templates/patient/patient_list.html
+msgid "Patients - HealthCheck System"
+msgstr "Pacienți - Sistem HealthCheck"
+
+msgid "Patient Management"
+msgstr "Gestionare Pacienți"
+
+msgid "Total:"
+msgstr "Total:"
+
+msgid "patient"
+msgstr "pacient"
+
+msgid "Add New Patient"
+msgstr "Adaugă pacient nou"
+
+msgid "Enter at least 3 characters to search by name, CNP, city, or county..."
+msgstr "Introduceți cel puțin 3 caractere pentru a căuta după nume, CNP, oraș sau județ..."
+
+msgid "Search"
+msgstr "Caută"
+
+msgid "Clear"
+msgstr "Golește"
+
+msgid "Privacy Note:"
+msgstr "Notă de confidențialitate:"
+
+msgid "Enter search criteria to view patient data. All access is logged for security."
+msgstr "Introduceți criteriile de căutare pentru a vedea datele pacientului. Toate accesările sunt înregistrate pentru securitate."
+
+msgid "Showing all assigned patients"
+msgstr "Afișează toți pacienții atribuiți"
+
+msgid "Found {{ patients|length }} result(s) for \"<strong>{{ search_query }}</strong>\""
+msgstr "Găsite {{ patients|length }} rezultate pentru \"<strong>{{ search_query }}</strong>\""
+
+msgid "Name"
+msgstr "Nume"
+
+msgid "Age"
+msgstr "Vârstă"
+
+msgid "Identity"
+msgstr "Identitate"
+
+msgid "Contact"
+msgstr "Contact"
+
+msgid "Location"
+msgstr "Locație"
+
+msgid "Actions"
+msgstr "Acțiuni"
+
+msgid "View full details (logged access)"
+msgstr "Vizualizează detalii complete (acces înregistrat)"
+
+msgid "View"
+msgstr "Vizualizează"
+
+msgid "Edit"
+msgstr "Editează"
+
+msgid "Delete"
+msgstr "Șterge"
+
+msgid "Security Notice:"
+msgstr "Notă de securitate:"
+
+msgid "In this list, only patient names are visible. Open a patient to view full details."
+msgstr "În această listă sunt vizibile doar numele pacienților. Deschideți un pacient pentru a vedea detalii complete."
+
+msgid "You have full access to patient data. All views are logged."
+msgstr "Aveți acces complet la datele pacientului. Toate vizualizările sunt înregistrate."
+
+msgid "Sensitive data is masked for privacy. Click \"View\" to see full details (access will be logged)."
+msgstr "Datele sensibile sunt mascate pentru confidențialitate. Faceți clic pe \"Vizualizează\" pentru a vedea detaliile complete (accesul va fi înregistrat)."
+
+msgid "Search term too short"
+msgstr "Termenul de căutare este prea scurt"
+
+msgid "Please type at least {{ min_search_length }} characters to search patients."
+msgstr "Vă rugăm să introduceți cel puțin {{ min_search_length }} caractere pentru a căuta pacienți."
+
+msgid "No patients found"
+msgstr "Nu s-au găsit pacienți"
+
+msgid "Try searching with different criteria"
+msgstr "Încercați să căutați cu criterii diferite"
+
+msgid "No assigned patients found"
+msgstr "Nu s-au găsit pacienți atribuiți"
+
+msgid "This doctor does not currently have assigned patients or linked appointments."
+msgstr "Acest doctor nu are în prezent pacienți atribuiți sau programări legate."
+
+msgid "Search to view patients"
+msgstr "Căutați pentru a vedea pacienții"
+
+msgid "Enter a name, CNP, or location above to find patient records"
+msgstr "Introduceți un nume, CNP sau locație deasupra pentru a găsi înregistrări ale pacienților"
+
+# General fallbacks
+msgid "Cancel"
+msgstr "Anulează"
+
+msgid "Save Patient"
+msgstr "Salvează pacient"
+
+msgid "Update Patient"
+msgstr "Actualizează pacient"
+
+msgid "Yes, Delete Patient"
+msgstr "Da, șterge pacientul"
+
+msgid "No, Cancel"
+msgstr "Nu, anulează"
+
+msgid "Create Appointment"
+msgstr "Creează programare"
+
+msgid "Total Appointments"
+msgstr "Programări totale"
+
+msgid "Today"
+msgstr "Astăzi"
+
+msgid "Upcoming"
+msgstr "Următoare"
+
+msgid "Unread Notifications"
+msgstr "Notificări necitite"
+
+msgid "Status"
+msgstr "Stare"
+
+msgid "From Date"
+msgstr "De la data"
+
+msgid "To Date"
+msgstr "Până la data"
+
+msgid "Filter"
+msgstr "Filtrează"
+
+msgid "No appointments found"
+msgstr "Nu s-au găsit programări"
+
+msgid "Create First Appointment"
+msgstr "Creează prima programare"
+
+msgid "Back to Patient List"
+msgstr "Înapoi la lista de pacienți"
+
+msgid "Viewing Full Medical Data"
+msgstr "Vizualizarea datelor medicale complete"
+
+msgid "Viewing Masked Patient Data"
+msgstr "Vizualizarea datelor mascate ale pacientului"
+
+msgid "Patient Details"
+msgstr "Detalii pacient"
+
+msgid "Full medical record information"
+msgstr "Informații complete din dosarul medical"
+
+msgid "Assigned Doctor"
+msgstr "Doctor alocat"
+
+msgid "Not assigned"
+msgstr "Nedistribuit"
+
+msgid "First Name"
+msgstr "Prenume"
+
+msgid "Last Name"
+msgstr "Nume"
+
+msgid "Date of Birth / Age"
+msgstr "Data nașterii / Vârsta"
+
+msgid "Nationality"
+msgstr "Naționalitate"
+
+msgid "CNP (Cod Numeric Personal)"
+msgstr "CNP (Cod Numeric Personal)"
+
+msgid "ID Card Series"
+msgstr "Seria buletinului"
+
+msgid "ID Card Number"
+msgstr "Număr buletin"
+
+msgid "Full ID"
+msgstr "ID complet"
+
+msgid "Phone Number"
+msgstr "Număr de telefon"
+
+msgid "Email Address"
+msgstr "Adresă de email"
+
+msgid "City"
+msgstr "Oraș"
+
+msgid "County"
+msgstr "Județ"
+
+msgid "Access Log"
+msgstr "Jurnal de acces"
+
+msgid "Recent access history for this patient"
+msgstr "Istoric recent de acces pentru acest pacient"
+
+msgid "No access logs available"
+msgstr "Nu există jurnale de acces disponibile"
+
+msgid "GDPR Compliance"
+msgstr "Conformitate GDPR"
+
+msgid "This patient has the right to:"
+msgstr "Acest pacient are dreptul la:"
+
+msgid "Access their data"
+msgstr "Acces la datele lor"
+
+msgid "Request corrections"
+msgstr "Solicitarea corecțiilor"
+
+msgid "Request deletion"
+msgstr "Solicitarea ștergerii"
+
+msgid "Data portability"
+msgstr "Portabilitatea datelor"
+
+msgid "Restrict processing"
+msgstr "Restricționarea prelucrării"
+

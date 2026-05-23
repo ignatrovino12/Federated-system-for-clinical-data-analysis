@@ -3,41 +3,10 @@ from django.core.validators import RegexValidator
 from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import date
-
-
-class UserProfile(models.Model):
-    """Extended user profile with role information"""
-    
-    ROLE_CHOICES = [
-        ('admin', 'Administrator'),
-        ('doctor', 'Doctor'),
-        ('receptionist', 'Receptionist'),
-    ]
-    
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='receptionist')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        db_table = 'user_profiles'
-        verbose_name = 'User Profile'
-        verbose_name_plural = 'User Profiles'
-    
-    def __str__(self):
-        return f"{self.user.username} ({self.get_role_display()})"
-    
-    def can_view_full_data(self):
-        """Check if user can view full patient data"""
-        return self.role in ['admin', 'doctor']
-    
-    def can_edit_data(self):
-        """Check if user can edit patient data"""
-        return self.role in ['admin', 'doctor']
-    
-    def can_delete_data(self):
-        """Check if user can delete patient data"""
-        return self.role == 'admin'
+from django.conf import settings
+import hmac
+import hashlib
+import logging
 
 
 class AccessLog(models.Model):
@@ -113,7 +82,7 @@ class Patient(models.Model):
         null=True,
         blank=True,
         related_name='assigned_patients',
-        limit_choices_to={'profile__role': 'doctor'},
+        limit_choices_to={'groups__name': 'doctor'},
         help_text='Doctor responsible for this patient',
     )
     
@@ -163,6 +132,15 @@ class Patient(models.Model):
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    # Pseudonym for safe lookup (HMAC of CNP)
+    pseudonym = models.CharField(
+        max_length=64,
+        unique=True,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text='HMAC-based pseudonym for patient identifier (deterministic)'
+    )
     
     class Meta:
         db_table = 'patients'
@@ -173,6 +151,7 @@ class Patient(models.Model):
             models.Index(fields=['CNP']),
             models.Index(fields=['nume', 'prenume']),
             models.Index(fields=['assigned_doctor', 'created_at']),
+                models.Index(fields=['pseudonym']),
         ]
     
     def __str__(self):
@@ -217,6 +196,27 @@ class Patient(models.Model):
         """Return masked identity document info"""
         return f"{self.serie_ci} ******"
 
+    def _compute_pseudonym(self, identifier: str) -> str:
+        """Compute HMAC-SHA256 hex digest for a given identifier using a secret key.
+
+        Falls back to `settings.SECRET_KEY` if `settings.PATIENT_HMAC_KEY` is not set.
+        """
+        key = getattr(settings, 'PATIENT_HMAC_KEY', None) or settings.SECRET_KEY
+        if not isinstance(key, (bytes, bytearray)):
+            key = str(key).encode('utf-8')
+        return hmac.new(key, identifier.encode('utf-8'), hashlib.sha256).hexdigest()
+
+    def save(self, *args, **kwargs):
+        # Ensure pseudonym exists and is deterministic from CNP
+        try:
+            if not self.pseudonym and self.CNP:
+                self.pseudonym = self._compute_pseudonym(self.CNP)
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Failed to compute pseudonym: {e}")
+
+        # proceed with normal validation and save
+        return super().save(*args, **kwargs)
+
 
 class Appointment(models.Model):
     """Model for patient appointments with doctors"""
@@ -233,7 +233,7 @@ class Appointment(models.Model):
     # Appointment details
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='appointments')
     doctor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='doctor_appointments', 
-                               limit_choices_to={'profile__role': 'doctor'})
+                               limit_choices_to={'groups__name': 'doctor'})
     
     # Schedule
     appointment_date = models.DateField(help_text="Appointment date")

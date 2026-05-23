@@ -31,6 +31,9 @@ SECRET_KEY = "django-insecure-@ujc&q=@w*e6hz2l9^2&a#5!&7$*ikn9hhn6%x&un)0)l!bwj&
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+# Key for patient pseudonym HMAC. Set in environment for production.
+PATIENT_HMAC_KEY = os.getenv('PATIENT_HMAC_KEY', SECRET_KEY)
+
 ALLOWED_HOSTS = [host.strip() for host in os.getenv(
     "ALLOWED_HOSTS",
     "localhost,127.0.0.1,healthcheck-web,web,healthcheck-flower-server,flower-server",
@@ -46,7 +49,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "pubsub",
+    "pubsub.apps.PubsubConfig",
     "clinical_ai",
     # Object-permission support
     "guardian",
@@ -55,6 +58,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "healthcheck.middleware.PrometheusMetricsMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -73,6 +77,7 @@ TEMPLATES = [
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.request",
+                "django.template.context_processors.i18n",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
             ],
@@ -138,6 +143,16 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/6.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Internationalization: additional languages and locale paths
+LANGUAGES = [
+    ("en", "English"),
+    ("ro", "Română"),
+]
+
+LOCALE_PATHS = [
+    BASE_DIR / "locale",
+]
 
 
 # Celery Configuration

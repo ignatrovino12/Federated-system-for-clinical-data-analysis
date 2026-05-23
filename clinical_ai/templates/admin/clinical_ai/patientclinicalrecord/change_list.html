@@ -1,24 +1,25 @@
 {% extends "admin/change_list.html" %}
+{% load i18n %}
 
 {% block object-tools-items %}
   <li>
     <a href="{% url 'admin:clinical_ai_patientclinicalrecord_sync_model' model='alex5050' %}" class="addlink">
-      Sync Alex5050 Latest Model
+      {% trans "Sync Alex5050 Latest Model" %}
     </a>
   </li>
   <li>
     <a href="{% url 'admin:clinical_ai_patientclinicalrecord_sync_model' model='mustafa' %}" class="addlink">
-      Sync Mustafa Latest Model
+      {% trans "Sync Mustafa Latest Model" %}
     </a>
   </li>
   <li>
     <a href="{% url 'admin:clinical_ai_patientclinicalrecord_clear_cache' model='alex5050' %}" class="deletelink">
-      Clear Alex5050 Cache
+      {% trans "Clear Alex5050 Cache" %}
     </a>
   </li>
   <li>
     <a href="{% url 'admin:clinical_ai_patientclinicalrecord_clear_cache' model='mustafa' %}" class="deletelink">
-      Clear Mustafa Cache
+      {% trans "Clear Mustafa Cache" %}
     </a>
   </li>
   {{ block.super }}

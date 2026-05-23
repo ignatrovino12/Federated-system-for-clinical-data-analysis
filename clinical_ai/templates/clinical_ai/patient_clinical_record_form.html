@@ -1,20 +1,21 @@
 {% extends 'main/base.html' %}
+{% load i18n %}
 
-{% block title %}Medical Data - {{ patient.get_full_name }}{% endblock %}
+{% block title %}{% blocktrans %}Medical Data - {{ patient.get_full_name }}{% endblocktrans %}{% endblock %}
 
 {% block content %}
 <div class="max-w-6xl mx-auto">
     <div class="mb-4">
         <a href="{% url 'pubsub:patient_detail' patient.id %}" class="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
-            ← Back to Patient Details
+            ← {% trans "Back to Patient Details" %}
         </a>
     </div>
 
     <div class="bg-white rounded-2xl shadow-xl p-8">
         <div class="flex justify-between items-start mb-6">
             <div>
-                <h2 class="text-3xl font-bold text-primary mb-2">Clinical Record</h2>
-                <p class="text-gray-600">Enter or change the patient's medical data for AI analysis.</p>
+                <h2 class="text-3xl font-bold text-primary mb-2">{% trans "Clinical Record" %}</h2>
+                <p class="text-gray-600">{% trans "Enter or change the patient's medical data for AI analysis." %}</p>
             </div>
         </div>
 
@@ -29,14 +30,14 @@
 
             {% if form.errors %}
             <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
-                <p class="font-semibold mb-2">Please fix the errors below.</p>
+                <p class="font-semibold mb-2">{% trans "Please fix the errors below." %}</p>
                 {{ form.non_field_errors }}
             </div>
             {% endif %}
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div class="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Demographics & History</h3>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">{% trans "Demographics & History" %}</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2" for="{{ form.patient_birth_date.id_for_label }}">{{ form.patient_birth_date.label }}</label>
@@ -63,7 +64,7 @@
                 </div>
 
                 <div class="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Measurements & Labs</h3>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">{% trans "Measurements & Labs" %}</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2" for="{{ form.bmi.id_for_label }}">{{ form.bmi.label }}</label>
@@ -82,7 +83,7 @@
             </div>
 
             <div class="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                <h3 class="text-xl font-semibold text-gray-800 mb-4">Lifestyle & Access to Care</h3>
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">{% trans "Lifestyle & Access to Care" %}</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="flex items-center gap-3">{{ form.high_bp }} <label for="{{ form.high_bp.id_for_label }}">{{ form.high_bp.label }}</label></div>
                     <div class="flex items-center gap-3">{{ form.high_chol }} <label for="{{ form.high_chol.id_for_label }}">{{ form.high_chol.label }}</label></div>
@@ -120,7 +121,7 @@
             </div>
 
             <div class="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                <h3 class="text-xl font-semibold text-gray-800 mb-4">Clinical Notes</h3>
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">{% trans "Clinical Notes" %}</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2" for="{{ form.diabetes_status.id_for_label }}">{{ form.diabetes_status.label }}</label>
@@ -137,9 +138,9 @@
             </div>
 
             <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
-                <a href="{% url 'pubsub:patient_detail' patient.id %}" class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">Cancel</a>
+                <a href="{% url 'pubsub:patient_detail' patient.id %}" class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">{% trans "Cancel" %}</a>
                 <button type="submit" class="px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-opacity-90 transition-colors">
-                    Save Medical Data
+                    {% trans "Save Medical Data" %}
                 </button>
             </div>
         </form>

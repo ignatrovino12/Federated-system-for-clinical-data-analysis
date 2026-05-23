@@ -1,15 +1,16 @@
 {% extends 'main/base.html' %}
+{% load i18n %}
 
-{% block title %}AI Analysis - HealthCheck{% endblock %}
+{% block title %}{% trans "AI Analysis - HealthCheck" %}{% endblock %}
 
 {% block content %}
 <div class="max-w-7xl mx-auto space-y-8">
     <div class="bg-white/95 rounded-3xl shadow-2xl p-8 border border-white/40">
         <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
             <div>
-                <p class="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-4">Clinical AI</p>
-                <h1 class="text-4xl font-bold text-gray-900 mb-3">Diabetes Risk Analysis</h1>
-                <p class="text-gray-600 max-w-3xl">Run an analysis with manual inputs or use the clinical data already stored for patients you can access.</p>
+                <p class="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-4">{% trans "Clinical AI" %}</p>
+                <h1 class="text-4xl font-bold text-gray-900 mb-3">{% trans "Diabetes Risk Analysis" %}</h1>
+                <p class="text-gray-600 max-w-3xl">{% trans "Run an analysis with manual inputs or use the clinical data already stored for patients you can access." %}</p>
             </div>
         </div>
     </div>
@@ -17,8 +18,8 @@
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
         <section class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
             <div class="bg-gradient-to-r from-primary to-secondary px-8 py-6 text-white">
-                <h2 class="text-2xl font-bold">Manual input analysis</h2>
-                <p class="text-white/85 mt-1">Enter the clinical values manually and score them with either model.</p>
+                <h2 class="text-2xl font-bold">{% trans "Manual input analysis" %}</h2>
+                <p class="text-white/85 mt-1">{% trans "Enter the clinical values manually and score them with either model." %}</p>
             </div>
             <div class="p-8 space-y-8">
                 {% if manual_error %}
@@ -48,8 +49,8 @@
                         <input type="hidden" name="action" value="manual_alex">
                         <div class="flex items-center justify-between">
                             <div>
-                                <h3 class="text-xl font-bold text-gray-900">Alex 5050 model</h3>
-                                <p class="text-sm text-gray-600">Lifestyle, access, and general health inputs.</p>
+                                <h3 class="text-xl font-bold text-gray-900">{% trans "Alex 5050 model" %}</h3>
+                                <p class="text-sm text-gray-600">{% trans "Lifestyle, access, and general health inputs." %}</p>
                             </div>
                             <span class="px-3 py-1 rounded-full bg-white text-primary text-xs font-semibold border border-primary/20">Manual</span>
                         </div>
@@ -66,8 +67,8 @@
                             {% endfor %}
                         </div>
 
-                        <button type="submit" class="w-full px-6 py-3 rounded-xl bg-gray-900 text-white font-semibold hover:bg-gray-800 transition-colors">
-                            Run Alex 5050 analysis
+                            <button type="submit" class="w-full px-6 py-3 rounded-xl bg-gray-900 text-white font-semibold hover:bg-gray-800 transition-colors">
+                            {% trans "Run Alex 5050 analysis" %}
                         </button>
                     </form>
 
@@ -76,8 +77,8 @@
                         <input type="hidden" name="action" value="manual_mustafa">
                         <div class="flex items-center justify-between">
                             <div>
-                                <h3 class="text-xl font-bold text-gray-900">Mustafa model</h3>
-                                <p class="text-sm text-gray-600">Core clinical measurements and diabetes-related risk factors.</p>
+                                <h3 class="text-xl font-bold text-gray-900">{% trans "Mustafa model" %}</h3>
+                                <p class="text-sm text-gray-600">{% trans "Core clinical measurements and diabetes-related risk factors." %}</p>
                             </div>
                             <span class="px-3 py-1 rounded-full bg-white text-primary text-xs font-semibold border border-primary/20">Manual</span>
                         </div>
@@ -93,7 +94,7 @@
                         </div>
 
                         <button type="submit" class="w-full px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-opacity-90 transition-colors">
-                            Run Mustafa analysis
+                            {% trans "Run Mustafa analysis" %}
                         </button>
                     </form>
                 </div>
@@ -102,8 +103,8 @@
 
         <section class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
             <div class="bg-gradient-to-r from-secondary to-primary px-8 py-6 text-white">
-                <h2 class="text-2xl font-bold">Patient record analysis</h2>
-                <p class="text-white/85 mt-1">Select a patient you can access, then run the model against stored clinical data.</p>
+                <h2 class="text-2xl font-bold">{% trans "Patient record analysis" %}</h2>
+                <p class="text-white/85 mt-1">{% trans "Select a patient you can access, then run the model against stored clinical data." %}</p>
             </div>
             <div class="p-8 space-y-6">
                 {% if quick_error %}
@@ -143,13 +144,13 @@
                     </div>
 
                     <div class="rounded-2xl border border-gray-200 bg-gray-50 p-5 text-sm text-gray-600 space-y-2">
-                        <p class="font-semibold text-gray-800">Access rules</p>
-                        <p>Doctors only see patients with appointments assigned to them.</p>
-                        <p>Admins can analyze all patients in the system.</p>
+                        <p class="font-semibold text-gray-800">{% trans "Access rules" %}</p>
+                        <p>{% trans "Doctors only see patients with appointments assigned to them." %}</p>
+                        <p>{% trans "Admins can analyze all patients in the system." %}</p>
                     </div>
 
                     <button type="submit" class="w-full px-6 py-3 rounded-xl bg-gray-900 text-white font-semibold hover:bg-gray-800 transition-colors">
-                        Run patient analysis
+                        {% trans "Run patient analysis" %}
                     </button>
                 </form>
             </div>

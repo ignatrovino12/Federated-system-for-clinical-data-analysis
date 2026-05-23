@@ -1,21 +1,22 @@
 {% extends 'main/base.html' %}
+{% load i18n %}
 
-{% block title %}Appointments - HealthCheck System{% endblock %}
+{% block title %}{% trans "Appointments - HealthCheck System" %}{% endblock %}
 
 {% block content %}
 <div class="bg-white rounded-2xl shadow-xl p-8">
     <div class="flex justify-between items-center mb-8">
         <div>
-            <h2 class="text-3xl font-bold text-primary mb-2">📅 Appointment Management</h2>
-            <p class="text-gray-600">Manage patient appointments</p>
+            <h2 class="text-3xl font-bold text-primary mb-2">📅 {% trans "Appointment Management" %}</h2>
+            <p class="text-gray-600">{% trans "Manage patient appointments" %}</p>
             {% if user_profile %}
                 <p class="text-sm text-gray-500 mt-1">Role: <span class="font-semibold">{{ user_profile.get_role_display }}</span></p>
             {% endif %}
         </div>
-        {% if user.has_perm "pubsub.add_appointment" %}
+        {% if perms.pubsub.add_appointment %}
         <a href="{% url 'pubsub:appointment_create' %}" 
            class="px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-lg hover:-translate-y-1 transition-transform shadow-lg">
-            ➕ Create Appointment
+            ➕ {% trans "Create Appointment" %}
         </a>
         {% endif %}
     </div>
@@ -24,20 +25,20 @@
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div class="bg-gradient-to-r from-blue-400 to-blue-600 text-white p-6 rounded-xl">
             <h3 class="text-3xl font-bold">{{ stats.total }}</h3>
-            <p class="text-sm opacity-90">Total Appointments</p>
+            <p class="text-sm opacity-90">{% trans "Total Appointments" %}</p>
         </div>
         <div class="bg-gradient-to-r from-green-400 to-green-600 text-white p-6 rounded-xl">
             <h3 class="text-3xl font-bold">{{ stats.today }}</h3>
-            <p class="text-sm opacity-90">Today</p>
+            <p class="text-sm opacity-90">{% trans "Today" %}</p>
         </div>
         <div class="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white p-6 rounded-xl">
             <h3 class="text-3xl font-bold">{{ stats.upcoming }}</h3>
-            <p class="text-sm opacity-90">Upcoming</p>
+            <p class="text-sm opacity-90">{% trans "Upcoming" %}</p>
         </div>
         {% if is_doctor_like %}
         <div class="bg-gradient-to-r from-red-400 to-red-600 text-white p-6 rounded-xl">
             <h3 class="text-3xl font-bold">{{ stats.unread }}</h3>
-            <p class="text-sm opacity-90">Unread Notifications</p>
+            <p class="text-sm opacity-90">{% trans "Unread Notifications" %}</p>
         </div>
         {% endif %}
     </div>
@@ -46,7 +47,7 @@
     <div class="mb-6 p-4 bg-gray-50 rounded-lg">
         <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2">{% trans "Status" %}</label>
                 <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary">
                     <option value="">All Status</option>
                     {% for value, label in status_choices %}
@@ -55,21 +56,21 @@
                 </select>
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">From Date</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2">{% trans "From Date" %}</label>
                 <input type="date" name="date_from" value="{{ request.GET.date_from }}"
                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary">
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">To Date</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2">{% trans "To Date" %}</label>
                 <input type="date" name="date_to" value="{{ request.GET.date_to }}"
                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary">
             </div>
             <div class="flex items-end gap-2">
                 <button type="submit" class="flex-1 px-4 py-2 bg-primary text-white font-semibold rounded-lg hover:bg-opacity-90">
-                    Filter
+                    {% trans "Filter" %}
                 </button>
                 <a href="{% url 'pubsub:appointment_list' %}" class="px-4 py-2 bg-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-400">
-                    Clear
+                    {% trans "Clear" %}
                 </a>
             </div>
         </form>
@@ -80,12 +81,12 @@
         <table class="w-full">
             <thead class="bg-gray-100 border-b-2 border-gray-300">
                 <tr>
-                    <th class="px-4 py-3 text-left text-gray-700 font-semibold">Patient</th>
-                    <th class="px-4 py-3 text-left text-gray-700 font-semibold">Doctor</th>
-                    <th class="px-4 py-3 text-left text-gray-700 font-semibold">Date & Time</th>
-                    <th class="px-4 py-3 text-left text-gray-700 font-semibold">Reason</th>
-                    <th class="px-4 py-3 text-left text-gray-700 font-semibold">Status</th>
-                    <th class="px-4 py-3 text-center text-gray-700 font-semibold">Actions</th>
+                    <th class="px-4 py-3 text-left text-gray-700 font-semibold">{% trans "Patient" %}</th>
+                    <th class="px-4 py-3 text-left text-gray-700 font-semibold">{% trans "Doctor" %}</th>
+                    <th class="px-4 py-3 text-left text-gray-700 font-semibold">{% trans "Date & Time" %}</th>
+                    <th class="px-4 py-3 text-left text-gray-700 font-semibold">{% trans "Reason" %}</th>
+                    <th class="px-4 py-3 text-left text-gray-700 font-semibold">{% trans "Status" %}</th>
+                    <th class="px-4 py-3 text-center text-gray-700 font-semibold">{% trans "Actions" %}</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
@@ -120,7 +121,7 @@
                         <div class="flex justify-center gap-2">
                             <a href="{% url 'pubsub:appointment_detail' appt.id %}" 
                                class="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition-colors">
-                                👁️ View
+                                👁️ {% trans "View" %}
                             </a>
                         </div>
                     </td>
@@ -132,11 +133,11 @@
     {% else %}
     <div class="text-center py-12">
         <div class="text-6xl mb-4">📅</div>
-        <p class="text-xl text-gray-600 mb-4">No appointments found</p>
-        {% if user.has_perm "pubsub.add_appointment" %}
-        <a href="{% url 'pubsub:appointment_create' %}" 
+        <p class="text-xl text-gray-600 mb-4">{% trans "No appointments found" %}</p>
+        {% if perms.pubsub.add_appointment %}
+                <a href="{% url 'pubsub:appointment_create' %}" 
            class="inline-block px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-lg hover:-translate-y-1 transition-transform shadow-lg">
-            ➕ Create First Appointment
+                ➕ {% trans "Create First Appointment" %}
         </a>
         {% endif %}
     </div>

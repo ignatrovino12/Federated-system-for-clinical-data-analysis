@@ -1,6 +1,7 @@
 {% extends 'main/base.html' %}
+{% load i18n %}
 
-{% block title %}Profile - HealthCheck System{% endblock %}
+{% block title %}{% trans "Profile - HealthCheck System" %}{% endblock %}
 
 {% block content %}
 <div class="max-w-6xl mx-auto">
@@ -12,26 +13,26 @@
                     {{ user.username|slice:":1"|upper }}
                 </div>
                 
-                <h2 class="text-3xl font-bold text-primary mb-8 pb-4 border-b-2 border-gray-200">User Profile</h2>
+                <h2 class="text-3xl font-bold text-primary mb-8 pb-4 border-b-2 border-gray-200">{% trans "User Profile" %}</h2>
                 
                 <div class="space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="font-semibold text-gray-600">Username:</div>
+                        <div class="font-semibold text-gray-600">{% trans "Username:" %}</div>
                         <div class="md:col-span-2 text-gray-900">{{ user.username }}</div>
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="font-semibold text-gray-600">Full Name:</div>
+                        <div class="font-semibold text-gray-600">{% trans "Full Name:" %}</div>
                         <div class="md:col-span-2 text-gray-900">{{ user.get_full_name|default:"Not set" }}</div>
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="font-semibold text-gray-600">Email:</div>
+                        <div class="font-semibold text-gray-600">{% trans "Email:" %}</div>
                         <div class="md:col-span-2 text-gray-900">{{ user.email|default:"Not set" }}</div>
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="font-semibold text-gray-600">Role:</div>
+                        <div class="font-semibold text-gray-600">{% trans "Role:" %}</div>
                         <div class="md:col-span-2">
                             {% if user_profile %}
                                 <span class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-primary to-secondary text-white rounded-lg font-semibold">
@@ -44,7 +45,7 @@
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="font-semibold text-gray-600">Admin:</div>
+                        <div class="font-semibold text-gray-600">{% trans "Admin:" %}</div>
                         <div class="md:col-span-2 text-gray-900">{{ user.is_staff|yesno:"Yes,No" }}</div>
                     </div>
                 </div>
@@ -52,19 +53,19 @@
                 <!-- Permissions -->
                 {% if user_profile %}
                 <div class="mt-8 p-6 bg-gray-50 rounded-lg">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">🔑 Your Permissions</h3>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">🔑 {% trans "Your Permissions" %}</h3>
                     <div class="space-y-2">
                         <div class="flex items-center">
                             <span class="w-6">{% if user_profile.can_view_full_data %}✅{% else %}❌{% endif %}</span>
-                            <span class="text-gray-700">View full patient data</span>
+                            <span class="text-gray-700">{% trans "View full patient data" %}</span>
                         </div>
                         <div class="flex items-center">
                             <span class="w-6">{% if user_profile.can_edit_data %}✅{% else %}❌{% endif %}</span>
-                            <span class="text-gray-700">Edit patient records</span>
+                            <span class="text-gray-700">{% trans "Edit patient records" %}</span>
                         </div>
                         <div class="flex items-center">
                             <span class="w-6">{% if user_profile.can_delete_data %}✅{% else %}❌{% endif %}</span>
-                            <span class="text-gray-700">Delete patient records</span>
+                            <span class="text-gray-700">{% trans "Delete patient records" %}</span>
                         </div>
                     </div>
                 </div>
@@ -75,8 +76,8 @@
         <!-- Activity Log Sidebar -->
         <div class="lg:col-span-1">
             <div class="bg-white rounded-2xl shadow-xl p-6">
-                <h3 class="text-xl font-semibold text-gray-800 mb-4">📊 My Recent Activity</h3>
-                <p class="text-sm text-gray-600 mb-4">Your last 20 actions</p>
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">📊 {% trans "My Recent Activity" %}</h3>
+                <p class="text-sm text-gray-600 mb-4">{% trans "Your last 20 actions" %}</p>
                 
                 {% if recent_logs %}
                 <div class="space-y-3 max-h-96 overflow-y-auto">
@@ -98,13 +99,13 @@
                     {% endfor %}
                 </div>
                 {% else %}
-                <p class="text-sm text-gray-500 italic">No activity yet</p>
+                <p class="text-sm text-gray-500 italic">{% trans "No activity yet" %}</p>
                 {% endif %}
                 
                 <div class="mt-4">
                     <a href="{% url 'admin:pubsub_accesslog_changelist' %}?user__id__exact={{ user.id }}" 
                        class="block text-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm">
-                        View Full History
+                        {% trans "View Full History" %}
                     </a>
                 </div>
             </div>

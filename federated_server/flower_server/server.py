@@ -203,6 +203,9 @@ class FederatedStrategy(FedAvg):
             state_dict = inferred_model.state_dict()
             keys = list(state_dict.keys())
 
+            if not self.minio_client.bucket_exists(self.bucket_name):
+                self.minio_client.make_bucket(self.bucket_name)
+
             if len(ndarrays) != len(keys):
                 logger.error(
                     f"Round {round_num}: Parameter count mismatch for checkpoint save "
@@ -265,12 +268,8 @@ def create_minio_client() -> Optional[Minio]:
             secret_key=secret_key,
             secure=use_ssl,
         )
-        
-        # Verify connection and ensure target bucket exists.
-        if not client.bucket_exists("models"):
-            client.make_bucket("models")
-            logger.info("Created MinIO bucket: models")
-        logger.info(f"MinIO client initialized: {endpoint}")
+
+        logger.info(f"MinIO client initialized for endpoint: {endpoint}")
         return client
     except Exception as e:
         logger.warning(f"Failed to initialize MinIO client: {e}")

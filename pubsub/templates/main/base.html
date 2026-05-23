@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+{% load i18n %}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -24,24 +25,34 @@
     <nav class="bg-white/95 shadow-lg">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
-                <h1 class="text-2xl font-bold text-primary">🏥 HealthCheck System</h1>
+                <h1 class="text-2xl font-bold text-primary">🏥 {% trans "HealthCheck System" %}</h1>
                 <div class="flex space-x-8">
-                    <a href="{% url 'pubsub:dashboard' %}" class="text-gray-700 hover:text-primary transition-colors">Dashboard</a>
-                    <a href="{% url 'pubsub:patient_list' %}" class="text-gray-700 hover:text-primary transition-colors">Patients</a>
-                    {% if user.has_perm "pubsub.change_patient" or user.has_perm "pubsub.delete_patient" %}
-                    <a href="{% url 'clinical_ai:analysis_dashboard' %}" class="text-gray-700 hover:text-primary transition-colors">AI Analysis</a>
+                    <a href="{% url 'pubsub:dashboard' %}" class="text-gray-700 hover:text-primary transition-colors">{% trans "Dashboard" %}</a>
+                    <a href="{% url 'pubsub:patient_list' %}" class="text-gray-700 hover:text-primary transition-colors">{% trans "Patients" %}</a>
+                    {% if perms.pubsub.change_patient or perms.pubsub.delete_patient %}
+                    <a href="{% url 'clinical_ai:analysis_dashboard' %}" class="text-gray-700 hover:text-primary transition-colors">{% trans "AI Analysis" %}</a>
                     {% endif %}
                     <a href="{% url 'pubsub:appointment_list' %}" class="relative text-gray-700 hover:text-primary transition-colors">
-                        Appointments
+                        {% trans "Appointments" %}
                         {% if unread_appointments_count > 0 %}
                         <span class="absolute -top-1 -right-4 bg-red-500 text-white text-xs rounded-full px-2 py-0.5 font-bold animate-pulse">
                             {{ unread_appointments_count }}
                         </span>
                         {% endif %}
                     </a>
-                    <a href="{% url 'pubsub:profile' %}" class="text-gray-700 hover:text-primary transition-colors">Profile</a>
-                    <a href="{% url 'admin:index' %}" class="text-gray-700 hover:text-primary transition-colors">Admin</a>
-                    <a href="{% url 'pubsub:logout' %}" class="text-gray-700 hover:text-primary transition-colors">Logout</a>
+                    <a href="{% url 'pubsub:profile' %}" class="text-gray-700 hover:text-primary transition-colors">{% trans "Profile" %}</a>
+                    <a href="{% url 'admin:index' %}" class="text-gray-700 hover:text-primary transition-colors">{% trans "Admin" %}</a>
+                    <a href="{% url 'pubsub:logout' %}" class="text-gray-700 hover:text-primary transition-colors">{% trans "Logout" %}</a>
+                    
+                    <!-- Language selector -->
+                    <form method="post" action="{% url 'set_language' %}" class="flex items-center">
+                        {% csrf_token %}
+                        <input name="next" type="hidden" value="{{ request.get_full_path }}">
+                        <select name="language" onchange="this.form.submit()" class="border rounded px-2 py-1 text-sm">
+                            <option value="en" {% if request.LANGUAGE_CODE|slice:":2" == "en" %}selected{% endif %}>English</option>
+                            <option value="ro" {% if request.LANGUAGE_CODE|slice:":2" == "ro" %}selected{% endif %}>Română</option>
+                        </select>
+                    </form>
                 </div>
             </div>
         </div>

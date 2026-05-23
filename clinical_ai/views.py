@@ -5,7 +5,8 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
-from pubsub.models import AccessLog, Appointment, Patient, UserProfile
+from pubsub.models import AccessLog, Appointment, Patient
+from pubsub.roles import get_role_info, has_any_role, is_in_group
 from pubsub.views import permission_required_or_role, is_doctor_like, is_group_doctor
 
 from healthcheck.metrics import record_analysis_request
@@ -20,8 +21,7 @@ from .models import PatientClinicalRecord
 
 
 def get_user_profile(user):
-    profile, _ = UserProfile.objects.get_or_create(user=user, defaults={"role": "receptionist"})
-    return profile
+    return get_role_info(user)
 
 
 def role_required(allowed_roles):
@@ -29,7 +29,7 @@ def role_required(allowed_roles):
         @wraps(view_func)
         def wrapper(request, *args, **kwargs):
             profile = get_user_profile(request.user)
-            if profile.role not in allowed_roles:
+            if not has_any_role(request.user, allowed_roles):
                 messages.error(request, "You do not have permission to access this resource.")
                 return redirect("pubsub:dashboard")
             return view_func(request, *args, **kwargs)
@@ -60,7 +60,7 @@ def can_access_patient(request_user, patient):
     profile = get_user_profile(request_user)
     # Admins by group membership have full access
     try:
-        if request_user.groups.filter(name='admin').exists():
+        if is_in_group(request_user, 'admin'):
             return True, profile
     except Exception:
         pass

@@ -31,6 +31,11 @@ def _build_feature_row(record: PatientClinicalRecord, model_type: str) -> Option
     return [float(value) for value in payload.values()]
 
 
+def _training_sample_weight(record: PatientClinicalRecord) -> float:
+    """Downweight records that have already participated in training many times."""
+    return 1.0 / (1.0 + float(record.federated_train_count or 0))
+
+
 def _load_feature_scaler(model_type: str):
     base_dir = Path(__file__).resolve().parents[3] / "machinelearning"
     if model_type == "alex5050":
@@ -145,6 +150,12 @@ class Command(BaseCommand):
                     use_ssl=options["minio_use_ssl"],
                 )
                 self.stdout.write(self.style.SUCCESS(f"Synced latest federated model to {synced_path}"))
+            except FileNotFoundError as exc:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"No existing federated model was found in MinIO for {model_type}; starting from scratch. {exc}"
+                    )
+                )
             except Exception as exc:
                 raise CommandError(f"Failed to sync latest federated model: {exc}") from exc
 
@@ -152,6 +163,8 @@ class Command(BaseCommand):
 
         features: List[List[float]] = []
         labels: List[float] = []
+        sample_weights: List[float] = []
+        record_ids: List[int] = []
 
         skipped_missing_features = 0
         skipped_missing_label = 0
@@ -174,6 +187,8 @@ class Command(BaseCommand):
 
             features.append(row)
             labels.append(label)
+            sample_weights.append(_training_sample_weight(record))
+            record_ids.append(record.id)
 
         if len(features) < min_samples:
             message = (
@@ -198,6 +213,7 @@ class Command(BaseCommand):
         scaler = _load_feature_scaler(model_type)
         x = scaler.transform(x).astype(np.float32)
         y = np.asarray(labels, dtype=np.float32)
+        sample_weight_array = np.asarray(sample_weights, dtype=np.float32)
 
         self.stdout.write(self.style.SUCCESS("Prepared local federated dataset"))
         self.stdout.write(
@@ -210,6 +226,8 @@ class Command(BaseCommand):
         client = create_client(
             model_type=model_type,
             local_data=(x, y),
+            local_sample_weights=sample_weight_array,
+            record_ids=record_ids,
             test_split=test_split,
             batch_size=batch_size,
         )

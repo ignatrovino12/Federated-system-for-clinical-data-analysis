@@ -7,15 +7,14 @@ and send updated weights to the central Flower server.
 import logging
 from collections import OrderedDict
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import flwr as fl
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader, TensorDataset, WeightedRandomSampler
-import math
+from torch.utils.data import DataLoader, TensorDataset
 
 logging.basicConfig(
     level=logging.INFO,
@@ -94,20 +93,31 @@ def train(
         pos_weight = float(num_neg / num_pos) if num_pos > 0 else 1.0
     except Exception:
         pos_weight = 1.0
-    criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([pos_weight], device=device))
+    criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([pos_weight], device=device), reduction="none")
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
     total_loss = 0.0
     num_batches = 0
 
     for epoch in range(epochs):
-        for batch_x, batch_y in train_loader:
+        for batch in train_loader:
+            if len(batch) == 3:
+                batch_x, batch_y, batch_weights = batch
+            else:
+                batch_x, batch_y = batch
+                batch_weights = None
+
             batch_x = batch_x.to(device)
             batch_y = batch_y.to(device).unsqueeze(1)
 
             optimizer.zero_grad()
             output = model(batch_x)
-            loss = criterion(output, batch_y)
+            per_sample_loss = criterion(output, batch_y)
+            if batch_weights is not None:
+                weight_tensor = batch_weights.to(device).unsqueeze(1)
+                loss = (per_sample_loss * weight_tensor).mean()
+            else:
+                loss = per_sample_loss.mean()
             loss.backward()
             optimizer.step()
 
@@ -148,10 +158,11 @@ def test(
 
 
 class FederatedClient(fl.client.NumPyClient):
-    def __init__(self, model: nn.Module, train_loader: DataLoader, test_loader: DataLoader):
+    def __init__(self, model: nn.Module, train_loader: DataLoader, test_loader: DataLoader, training_record_ids: Optional[Sequence[int]] = None):
         self.model = model
         self.train_loader = train_loader
         self.test_loader = test_loader
+        self.training_record_ids = list(training_record_ids or [])
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
     def get_parameters(self, config: Dict) -> List[np.ndarray]:
@@ -167,6 +178,18 @@ class FederatedClient(fl.client.NumPyClient):
             lr=float(config.get("learning_rate", 0.001)),
             device=self.device,
         )
+        if self.training_record_ids:
+            try:
+                from django.db.models import F
+                from django.utils import timezone
+                from clinical_ai.models import PatientClinicalRecord
+
+                PatientClinicalRecord.objects.filter(id__in=self.training_record_ids).update(
+                    federated_train_count=F("federated_train_count") + 1,
+                    last_federated_train_at=timezone.now(),
+                )
+            except Exception:
+                logger.exception("Failed to update federated training counters")
         num_examples = len(self.train_loader.dataset)
         return get_weights(self.model), num_examples, {"loss": loss}
 
@@ -181,6 +204,8 @@ class FederatedClient(fl.client.NumPyClient):
 def create_client(
     model_type: str = "alex5050",
     local_data: Tuple[np.ndarray, np.ndarray] = None,
+    local_sample_weights: Optional[np.ndarray] = None,
+    record_ids: Optional[Sequence[int]] = None,
     test_split: float = 0.2,
     batch_size: int = 32,
 ) -> FederatedClient:
@@ -210,8 +235,12 @@ def create_client(
         logger.warning("No local data provided, creating dummy data")
         features = np.random.randn(100, input_size).astype(np.float32)
         labels = np.random.randint(0, 2, 100).astype(np.float32)
+        sample_weights = np.ones(100, dtype=np.float32)
+        record_ids = list(range(100))
     else:
         features, labels = local_data
+        sample_weights = local_sample_weights if local_sample_weights is not None else np.ones(len(features), dtype=np.float32)
+        record_ids = list(record_ids or range(len(features)))
 
     num_examples = len(features)
     if num_examples == 0:
@@ -224,18 +253,18 @@ def create_client(
 
     train_x, test_x = features[:split_idx], features[split_idx:]
     train_y, test_y = labels[:split_idx], labels[split_idx:]
+    train_weights = sample_weights[:split_idx]
+    train_record_ids = list(record_ids[:split_idx])
 
-    train_dataset = TensorDataset(torch.from_numpy(train_x).float(), torch.from_numpy(train_y).float())
+    train_dataset = TensorDataset(
+        torch.from_numpy(train_x).float(),
+        torch.from_numpy(train_y).float(),
+        torch.from_numpy(train_weights).float(),
+    )
     test_dataset = TensorDataset(torch.from_numpy(test_x).float(), torch.from_numpy(test_y).float())
 
-    if len(train_y) > 0:
-        class_counts = np.bincount(train_y.astype(np.int64), minlength=2)
-        class_counts = np.maximum(class_counts, 1)
-        sample_weights = np.array([1.0 / class_counts[int(label)] for label in train_y], dtype=np.float32)
-        sampler = WeightedRandomSampler(weights=torch.from_numpy(sample_weights), num_samples=len(sample_weights), replacement=True)
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=sampler)
-    else:
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    # Use each training sample once per epoch and downweight patients that have already been trained many times.
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
-    return FederatedClient(model, train_loader, test_loader)
+    return FederatedClient(model, train_loader, test_loader, training_record_ids=train_record_ids)

@@ -1,9 +1,9 @@
 - make the ai check for critical cases and anounce the doctors
-- overfitting if using same inputs again and again - solve somehow
-- encrypt the mapping user - data ( hmac?)
-- language english/ romana
+- show statistics (why the solution is good)
+- make trainign model better ( maybe the base as well )
+- language english/ romana  - de terminat traducerea pe romana
 
-- test RBAC
+- test RBAC / make sure RBAC works in all cases  
 
 -+ TLS - needs changes when in production
 
@@ -15,12 +15,21 @@ Optional:
 
 
 
+DONE
+
+
 Redis used for :
 notifications when appointments are assigned
 periodic deletion of appointments
 checking critical cases
 
 
-Access control rbac + djang oguardian
+Access control rbac + django guardian
 python manage.py migrate
 python manage.py bootstrap_roles
+
+encrypted the mapping user - data with HMAC
+
+
+Training
+- downweight already trained on patients
