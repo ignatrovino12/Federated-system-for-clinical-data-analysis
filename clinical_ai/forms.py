@@ -1,4 +1,5 @@
 from django import forms
+from django.utils.translation import gettext_lazy as _
 
 from pubsub.models import Patient
 
@@ -6,54 +7,54 @@ from .models import PatientClinicalRecord
 
 
 YES_NO_CHOICES = [
-    ("", "Select one"),
-    ("1", "Yes"),
-    ("0", "No"),
+    ("", _("Select one")),
+    ("1", _("Yes")),
+    ("0", _("No")),
 ]
 
 GENDER_CHOICES = [
-    ("", "Select one"),
-    ("0", "Female"),
-    ("1", "Male"),
+    ("", _("Select one")),
+    ("0", _("Female")),
+    ("1", _("Male")),
 ]
 
 SMOKING_CHOICES = [
-    ("", "Select one"),
-    ("0", "Never"),
-    ("1", "No info"),
-    ("2", "Former"),
-    ("3", "Current"),
+    ("", _("Select one")),
+    ("0", _("Never")),
+    ("1", _("No info")),
+    ("2", _("Former")),
+    ("3", _("Current")),
 ]
 
 GENERAL_HEALTH_CHOICES = [
-    ("", "Select one"),
-    ("1", "Excellent"),
-    ("2", "Very good"),
-    ("3", "Good"),
-    ("4", "Fair"),
-    ("5", "Poor"),
+    ("", _("Select one")),
+    ("1", _("Excellent")),
+    ("2", _("Very good")),
+    ("3", _("Good")),
+    ("4", _("Fair")),
+    ("5", _("Poor")),
 ]
 
 EDUCATION_CHOICES = [
-    ("", "Select one"),
-    ("1", "Less than 9th grade"),
-    ("2", "High school graduate"),
-    ("3", "Attended college (no degree)"),
-    ("4", "College graduate"),
-    ("5", "Post-graduate"),
-    ("6", "Other / Unknown"),
+    ("", _("Select one")),
+    ("1", _("Less than 9th grade")),
+    ("2", _("High school graduate")),
+    ("3", _("Attended college (no degree)")),
+    ("4", _("College graduate")),
+    ("5", _("Post-graduate")),
+    ("6", _("Other / Unknown")),
 ]
 
 INCOME_CHOICES = [
-    ("", "Select one"),
-    ("1", "Less than $10,000"),
-    ("2", "$10,000 to $14,999"),
-    ("3", "$15,000 to $19,999"),
-    ("4", "$20,000 to $24,999"),
-    ("5", "$25,000 to $34,999"),
-    ("6", "$35,000 to $49,999"),
-    ("7", "$50,000 to $74,999"),
-    ("8", "$75,000 or more"),
+    ("", _("Select one")),
+    ("1", _("Less than $10,000")),
+    ("2", _("$10,000 to $14,999")),
+    ("3", _("$15,000 to $19,999")),
+    ("4", _("$20,000 to $24,999")),
+    ("5", _("$25,000 to $34,999")),
+    ("6", _("$35,000 to $49,999")),
+    ("7", _("$50,000 to $74,999")),
+    ("8", _("$75,000 or more")),
 ]
 
 
@@ -66,7 +67,7 @@ class PatientClinicalRecordForm(forms.ModelForm):
                 "type": "date",
             }
         ),
-        label="Date of birth",
+        label=_("Date of birth"),
     )
 
     class Meta:
@@ -133,35 +134,35 @@ class PatientClinicalRecordForm(forms.ModelForm):
             "notes": forms.Textarea(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg", "rows": 4}),
         }
         labels = {
-            "patient_birth_date": "Date of birth",
-            "gender": "Sex",
-            "age_years": "Age (auto-calculated)",
-            "hypertension": "High blood pressure",
-            "heart_disease": "Heart disease",
-            "smoking_history": "Smoking history",
-            "bmi": "Body mass index (BMI)",
-            "hba1c_level": "HbA1c level",
-            "blood_glucose_level": "Blood glucose level",
-            "high_bp": "High blood pressure",
-            "high_chol": "High cholesterol",
-            "chol_check": "Cholesterol screening completed",
-            "smoker": "Current smoker",
-            "stroke": "History of stroke",
-            "phys_activity": "Regular physical activity",
-            "fruits": "Eats fruit regularly",
-            "veggies": "Eats vegetables regularly",
-            "heavy_alcohol_consumption": "Heavy alcohol consumption",
-            "any_healthcare": "Has healthcare coverage",
-            "no_docbc_cost": "Did not see a doctor because of cost",
-            "general_health": "Overall health",
-            "mental_health_days": "Mental health days in the past 30 days",
-            "physical_health_days": "Physical health days in the past 30 days",
-            "diff_walk": "Difficulty walking",
-            "education": "Education level",
-            "income": "Income level",
-            "diabetes_status": "Diabetes status",
-            "data_consent_for_training": "Consent to use data for federated training",
-            "notes": "Clinical notes",
+            "patient_birth_date": _("Date of birth"),
+            "gender": _("Sex"),
+            "age_years": _("Age (auto-calculated)"),
+            "hypertension": _("High blood pressure"),
+            "heart_disease": _("Heart disease"),
+            "smoking_history": _("Smoking history"),
+            "bmi": _("Body mass index (BMI)"),
+            "hba1c_level": _("HbA1c level"),
+            "blood_glucose_level": _("Blood glucose level"),
+            "high_bp": _("High blood pressure"),
+            "high_chol": _("High cholesterol"),
+            "chol_check": _("Cholesterol screening completed"),
+            "smoker": _("Current smoker"),
+            "stroke": _("History of stroke"),
+            "phys_activity": _("Regular physical activity"),
+            "fruits": _("Eats fruit regularly"),
+            "veggies": _("Eats vegetables regularly"),
+            "heavy_alcohol_consumption": _("Heavy alcohol consumption"),
+            "any_healthcare": _("Has healthcare coverage"),
+            "no_docbc_cost": _("Did not see a doctor because of cost"),
+            "general_health": _("Overall health"),
+            "mental_health_days": _("Mental health days in the past 30 days"),
+            "physical_health_days": _("Physical health days in the past 30 days"),
+            "diff_walk": _("Difficulty walking"),
+            "education": _("Education level"),
+            "income": _("Income level"),
+            "diabetes_status": _("Diabetes status"),
+            "data_consent_for_training": _("Consent to use data for federated training"),
+            "notes": _("Clinical notes"),
         }
 
     def __init__(self, *args, **kwargs):
@@ -197,38 +198,38 @@ class AlexManualAnalysisForm(forms.Form):
         choices=GENDER_CHOICES,
         coerce=int,
         widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}),
-        label="Sex",
+        label=_("Sex"),
     )
     age_years = forms.IntegerField(
         min_value=0,
         max_value=120,
         widget=forms.NumberInput(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg", "min": 0, "max": 120}),
-        label="Age (years)",
+        label=_("Age (years)"),
     )
-    high_bp = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label="High blood pressure")
-    high_chol = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label="High cholesterol")
-    chol_check = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label="Cholesterol screening completed")
+    high_bp = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label=_("High blood pressure"))
+    high_chol = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label=_("High cholesterol"))
+    chol_check = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label=_("Cholesterol screening completed"))
     bmi = forms.FloatField(
         min_value=0,
         max_value=100,
         widget=forms.NumberInput(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg", "step": "0.01"}),
-        label="Body mass index (BMI)",
+        label=_("Body mass index (BMI)"),
     )
-    smoker = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label="Current smoker")
-    stroke = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label="History of stroke")
-    heart_disease = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label="Heart disease or heart attack")
-    phys_activity = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label="Regular physical activity")
-    fruits = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label="Eats fruit regularly")
-    veggies = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label="Eats vegetables regularly")
-    heavy_alcohol_consumption = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label="Heavy alcohol consumption")
-    any_healthcare = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label="Has healthcare coverage")
-    no_docbc_cost = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label="Did not see a doctor because of cost")
-    general_health = forms.TypedChoiceField(choices=GENERAL_HEALTH_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label="Overall health")
-    mental_health_days = forms.IntegerField(min_value=0, max_value=30, widget=forms.NumberInput(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg", "min": 0, "max": 30}), label="Mental health days in the past 30 days")
-    physical_health_days = forms.IntegerField(min_value=0, max_value=30, widget=forms.NumberInput(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg", "min": 0, "max": 30}), label="Physical health days in the past 30 days")
-    diff_walk = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label="Difficulty walking")
-    education = forms.TypedChoiceField(choices=EDUCATION_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label="Education level")
-    income = forms.TypedChoiceField(choices=INCOME_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label="Income level")
+    smoker = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label=_("Current smoker"))
+    stroke = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label=_("History of stroke"))
+    heart_disease = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label=_("Heart disease or heart attack"))
+    phys_activity = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label=_("Regular physical activity"))
+    fruits = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label=_("Eats fruit regularly"))
+    veggies = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label=_("Eats vegetables regularly"))
+    heavy_alcohol_consumption = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label=_("Heavy alcohol consumption"))
+    any_healthcare = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label=_("Has healthcare coverage"))
+    no_docbc_cost = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label=_("Did not see a doctor because of cost"))
+    general_health = forms.TypedChoiceField(choices=GENERAL_HEALTH_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label=_("Overall health"))
+    mental_health_days = forms.IntegerField(min_value=0, max_value=30, widget=forms.NumberInput(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg", "min": 0, "max": 30}), label=_("Mental health days in the past 30 days"))
+    physical_health_days = forms.IntegerField(min_value=0, max_value=30, widget=forms.NumberInput(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg", "min": 0, "max": 30}), label=_("Physical health days in the past 30 days"))
+    diff_walk = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label=_("Difficulty walking"))
+    education = forms.TypedChoiceField(choices=EDUCATION_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label=_("Education level"))
+    income = forms.TypedChoiceField(choices=INCOME_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label=_("Income level"))
 
     def to_feature_payload(self):
         cleaned = self.cleaned_data
@@ -263,39 +264,39 @@ class MustafaManualAnalysisForm(forms.Form):
         choices=GENDER_CHOICES,
         coerce=int,
         widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}),
-        label="Sex",
+        label=_("Sex"),
     )
     age_years = forms.IntegerField(
         min_value=0,
         max_value=120,
         widget=forms.NumberInput(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg", "min": 0, "max": 120}),
-        label="Age (years)",
+        label=_("Age (years)"),
     )
-    hypertension = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label="High blood pressure")
-    heart_disease = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label="Heart disease")
+    hypertension = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label=_("High blood pressure"))
+    heart_disease = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=int, widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}), label=_("Heart disease"))
     smoking_history = forms.TypedChoiceField(
         choices=SMOKING_CHOICES,
         coerce=int,
         widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}),
-        label="Smoking history",
+        label=_("Smoking history"),
     )
     bmi = forms.FloatField(
         min_value=0,
         max_value=100,
         widget=forms.NumberInput(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg", "step": "0.01"}),
-        label="Body mass index (BMI)",
+        label=_("Body mass index (BMI)"),
     )
     hba1c_level = forms.FloatField(
         min_value=0,
         max_value=20,
         widget=forms.NumberInput(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg", "step": "0.01"}),
-        label="HbA1c level",
+        label=_("HbA1c level"),
     )
     blood_glucose_level = forms.IntegerField(
         min_value=0,
         max_value=1000,
         widget=forms.NumberInput(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}),
-        label="Blood glucose level",
+        label=_("Blood glucose level"),
     )
 
     def to_feature_payload(self):
@@ -314,20 +315,20 @@ class MustafaManualAnalysisForm(forms.Form):
 
 class ClinicalAnalysisSelectionForm(forms.Form):
     MODEL_CHOICES = [
-        ("", "Select one"),
-        ("alex", "Alex 5050 model"),
-        ("mustafa", "Mustafa model"),
+        ("", _("Select one")),
+        ("alex", _("Alex 5050 model")),
+        ("mustafa", _("Mustafa model")),
     ]
 
     model = forms.ChoiceField(
         choices=MODEL_CHOICES,
         widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}),
-        label="Analysis model",
+        label=_("Analysis model"),
     )
     patient = forms.ModelChoiceField(
         queryset=Patient.objects.none(),
         widget=forms.Select(attrs={"class": "w-full px-4 py-3 border-2 border-gray-300 rounded-lg"}),
-        label="Patient",
+        label=_("Patient"),
     )
 
     def __init__(self, *args, patient_queryset=None, **kwargs):

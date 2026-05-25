@@ -33,11 +33,11 @@
                     <div class="flex items-center justify-between gap-4">
                         <div>
                             <p class="text-sm text-emerald-700 font-semibold">{{ manual_result.model_label }}</p>
-                            <p class="text-xl font-bold text-emerald-900">Diabetes probability</p>
+                            <p class="text-xl font-bold text-emerald-900">{% trans "Diabetes probability" %}</p>
                         </div>
                         <div class="text-right">
                             <p class="text-4xl font-black text-emerald-700">{{ manual_result.probability_pct|floatformat:2 }}%</p>
-                            <p class="text-sm text-emerald-700">Threshold: {{ manual_result.threshold|floatformat:2 }}</p>
+                            <p class="text-sm text-emerald-700">{% trans "Threshold:" %} {{ manual_result.threshold|floatformat:2 }}</p>
                         </div>
                     </div>
                 </div>
@@ -52,7 +52,7 @@
                                 <h3 class="text-xl font-bold text-gray-900">{% trans "Alex 5050 model" %}</h3>
                                 <p class="text-sm text-gray-600">{% trans "Lifestyle, access, and general health inputs." %}</p>
                             </div>
-                            <span class="px-3 py-1 rounded-full bg-white text-primary text-xs font-semibold border border-primary/20">Manual</span>
+                            <span class="px-3 py-1 rounded-full bg-white text-primary text-xs font-semibold border border-primary/20">{% trans "Manual" %}</span>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -80,7 +80,7 @@
                                 <h3 class="text-xl font-bold text-gray-900">{% trans "Mustafa model" %}</h3>
                                 <p class="text-sm text-gray-600">{% trans "Core clinical measurements and diabetes-related risk factors." %}</p>
                             </div>
-                            <span class="px-3 py-1 rounded-full bg-white text-primary text-xs font-semibold border border-primary/20">Manual</span>
+                            <span class="px-3 py-1 rounded-full bg-white text-primary text-xs font-semibold border border-primary/20">{% trans "Manual" %}</span>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -119,10 +119,10 @@
                     <h3 class="text-xl font-bold text-emerald-900 mt-1">{{ quick_result.patient_label }}</h3>
                     <div class="mt-4 flex items-end justify-between gap-4">
                         <div>
-                            <p class="text-sm text-emerald-700">Diabetes probability</p>
+                            <p class="text-sm text-emerald-700">{% trans "Diabetes probability" %}</p>
                             <p class="text-4xl font-black text-emerald-700">{{ quick_result.probability_pct|floatformat:2 }}%</p>
                         </div>
-                        <p class="text-sm text-emerald-700">Threshold: {{ quick_result.threshold|floatformat:2 }}</p>
+                        <p class="text-sm text-emerald-700">{% trans "Threshold:" %} {{ quick_result.threshold|floatformat:2 }}</p>
                     </div>
                 </div>
                 {% endif %}
@@ -141,12 +141,6 @@
                         <label class="block text-sm font-semibold text-gray-700 mb-2" for="{{ selection_form.patient.id_for_label }}">{{ selection_form.patient.label }}</label>
                         {{ selection_form.patient }}
                         {% if selection_form.patient.errors %}<p class="text-sm text-red-600 mt-1">{{ selection_form.patient.errors|striptags }}</p>{% endif %}
-                    </div>
-
-                    <div class="rounded-2xl border border-gray-200 bg-gray-50 p-5 text-sm text-gray-600 space-y-2">
-                        <p class="font-semibold text-gray-800">{% trans "Access rules" %}</p>
-                        <p>{% trans "Doctors only see patients with appointments assigned to them." %}</p>
-                        <p>{% trans "Admins can analyze all patients in the system." %}</p>
                     </div>
 
                     <button type="submit" class="w-full px-6 py-3 rounded-xl bg-gray-900 text-white font-semibold hover:bg-gray-800 transition-colors">

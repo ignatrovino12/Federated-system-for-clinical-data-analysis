@@ -10,7 +10,7 @@
             <h2 class="text-3xl font-bold text-primary mb-2">📅 {% trans "Appointment Management" %}</h2>
             <p class="text-gray-600">{% trans "Manage patient appointments" %}</p>
             {% if user_profile %}
-                <p class="text-sm text-gray-500 mt-1">Role: <span class="font-semibold">{{ user_profile.get_role_display }}</span></p>
+                <p class="text-sm text-gray-500 mt-1">{% trans "Role" %}: <span class="font-semibold">{{ user_profile.get_role_display }}</span></p>
             {% endif %}
         </div>
         {% if perms.pubsub.add_appointment %}

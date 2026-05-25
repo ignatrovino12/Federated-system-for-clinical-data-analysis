@@ -41,8 +41,8 @@
                     </a>
                 </p>
                 <div class="grid grid-cols-2 gap-2 text-sm text-gray-600">
-                    <div>Age: {{ appointment.patient.get_age }} years</div>
-                    <div>City: {{ appointment.patient.oras }}</div>
+                    <div>{% trans "Age" %}: {{ appointment.patient.get_age }} {% trans "years" %}</div>
+                    <div>{% trans "City" %}: {{ appointment.patient.oras }}</div>
                 </div>
             </div>
         </div>
@@ -71,7 +71,7 @@
                 </div>
                 <div class="bg-gray-50 rounded-lg p-4">
                     <p class="text-sm text-gray-500">{% trans "Duration" %}</p>
-                    <p class="text-lg font-medium text-gray-900">{{ appointment.duration_minutes }} minutes</p>
+                    <p class="text-lg font-medium text-gray-900">{% blocktrans count mins=appointment.duration_minutes %}{{ mins }} minute{% plural %}{{ mins }} minute{% endblocktrans %}</p>
                 </div>
             </div>
         </div>

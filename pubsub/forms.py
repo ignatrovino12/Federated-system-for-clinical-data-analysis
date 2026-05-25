@@ -36,6 +36,7 @@ class PatientForm(forms.ModelForm):
     CNP = forms.CharField(
         validators=[cnp_validator],
         max_length=13,
+        label=_("CNP"),
         widget=forms.TextInput(attrs={
             'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-primary transition-colors',
             'placeholder': '1234567890123',
@@ -46,6 +47,7 @@ class PatientForm(forms.ModelForm):
     serie_ci = forms.CharField(
         validators=[serie_ci_validator],
         max_length=2,
+        label=_("CI Series"),
         widget=forms.TextInput(attrs={
             'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-primary transition-colors uppercase',
             'placeholder': 'AB',
@@ -57,6 +59,7 @@ class PatientForm(forms.ModelForm):
     numar_ci = forms.CharField(
         validators=[numar_ci_validator],
         max_length=6,
+        label=_("CI Number"),
         widget=forms.TextInput(attrs={
             'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-primary transition-colors',
             'placeholder': '123456',
@@ -94,11 +97,11 @@ class PatientForm(forms.ModelForm):
         widgets = {
             'nume': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-primary transition-colors',
-                'placeholder': 'Nume'
+                'placeholder': _('Last Name')
             }),
             'prenume': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-primary transition-colors',
-                'placeholder': 'Prenume'
+                'placeholder': _('First Name')
             }),
             'data_nasterii': forms.DateInput(attrs={
                 'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-primary transition-colors',
@@ -106,27 +109,27 @@ class PatientForm(forms.ModelForm):
             }),
             'nationalitate': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-primary transition-colors',
-                'placeholder': 'Română'
+                'placeholder': _('Nationality')
             }),
             'oras': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-primary transition-colors',
-                'placeholder': 'Iași'
+                'placeholder': _('City')
             }),
             'judet': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-primary transition-colors',
-                'placeholder': 'Iași'
+                'placeholder': _('County')
             }),
         }
         labels = {
-            'nume': _('Last name'),
-            'prenume': _('First name'),
-            'data_nasterii': _('Date of birth'),
+            'nume': _('Last Name'),
+            'prenume': _('First Name'),
+            'data_nasterii': _('Date of Birth'),
             'nationalitate': _('Nationality'),
-            'CNP': _('CNP (Personal Numeric Code)'),
-            'serie_ci': _('ID series'),
-            'numar_ci': _('ID number'),
-            'telefon': _('Phone'),
-            'email': _('Email'),
+            'CNP': _('CNP'),
+            'serie_ci': _('CI Series'),
+            'numar_ci': _('CI Number'),
+            'telefon': _('Phone Number'),
+            'email': _('Email Address'),
             'oras': _('City'),
             'judet': _('County')
         }

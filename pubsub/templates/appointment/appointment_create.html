@@ -62,7 +62,7 @@
                     </label>
                     <select name="doctor_id" id="doctor_id" required
                             class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-primary transition-colors">
-                        <option value="">-- Select Doctor --</option>
+                        <option value="">-- {% trans "Select Doctor" %} --</option>
                         {% for doctor in doctors %}
                         <option value="{{ doctor.id }}">
                             Dr. {{ doctor.get_full_name|default:doctor.username }}

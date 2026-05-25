@@ -21,3 +21,11 @@ docker exec healthcheck-web python manage.py seed_training_data --count 100 --cl
 start aggregation
 python flower_server/trigger_training.py --control-url http://localhost:8081 --model alex5050
 python flower_server/trigger_training.py --control-url http://localhost:8081 --model mustafa
+
+
+translation
+docker exec healthcheck-web python manage.py makemessages -l ro
+docker exec healthcheck-web python manage.py compilemessages
+
+docker exec healthcheck-web bash -lc "msgfmt -o /app/locale/ro/LC_MESSAGES/django.mo /app/locale/ro/LC_MESSAGES/django.po"
+docker restart healthcheck-web

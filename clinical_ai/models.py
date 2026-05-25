@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 from pubsub.models import Patient
 
@@ -11,44 +12,44 @@ class PatientClinicalRecord(models.Model):
 	"""Clinical data used by the Alex5050 and Mustafa ML models."""
 
 	class DiabetesStatus(models.TextChoices):
-		HAS = "has", "Confirmed diabetes"
-		HAS_NOT = "has_not", "Confirmed no diabetes"
-		NOT_CONFIRMED = "not_confirmed", "Not confirmed"
+		HAS = "has", _("Confirmed diabetes")
+		HAS_NOT = "has_not", _("Confirmed no diabetes")
+		NOT_CONFIRMED = "not_confirmed", _("Not confirmed")
 
 	class Gender(models.IntegerChoices):
-		FEMALE = 0, "Female"
-		MALE = 1, "Male"
+		FEMALE = 0, _("Female")
+		MALE = 1, _("Male")
 
 	class SmokingHistory(models.IntegerChoices):
-		NEVER = 0, "Never"
-		NO_INFO = 1, "No info"
-		FORMER = 2, "Former"
-		CURRENT = 3, "Current"
+		NEVER = 0, _("Never")
+		NO_INFO = 1, _("No info")
+		FORMER = 2, _("Former")
+		CURRENT = 3, _("Current")
 
 	class GeneralHealth(models.IntegerChoices):
-		EXCELLENT = 1, "Excellent"
-		VERY_GOOD = 2, "Very good"
-		GOOD = 3, "Good"
-		FAIR = 4, "Fair"
-		POOR = 5, "Poor"
+		EXCELLENT = 1, _("Excellent")
+		VERY_GOOD = 2, _("Very good")
+		GOOD = 3, _("Good")
+		FAIR = 4, _("Fair")
+		POOR = 5, _("Poor")
 
 	class Education(models.IntegerChoices):
-		LESS_THAN_9TH = 1, "Less than 9th grade"
-		HIGH_SCHOOL = 2, "High school graduate"
-		SOME_COLLEGE = 3, "Attended college (no degree)"
-		COLLEGE_GRAD = 4, "College graduate"
-		POST_GRAD = 5, "Post-graduate"
-		OTHER = 6, "Other / Unknown"
+		LESS_THAN_9TH = 1, _("Less than 9th grade")
+		HIGH_SCHOOL = 2, _("High school graduate")
+		SOME_COLLEGE = 3, _("Attended college (no degree)")
+		COLLEGE_GRAD = 4, _("College graduate")
+		POST_GRAD = 5, _("Post-graduate")
+		OTHER = 6, _("Other / Unknown")
 
 	class Income(models.IntegerChoices):
-		LESS_THAN_10K = 1, "Less than $10,000"
-		TEN_TO_15K = 2, "$10,000 to $14,999"
-		FIFTEEN_TO_20K = 3, "$15,000 to $19,999"
-		TWENTY_TO_25K = 4, "$20,000 to $24,999"
-		TWENTYFIVE_TO_35K = 5, "$25,000 to $34,999"
-		THIRTYFIVE_TO_50K = 6, "$35,000 to $49,999"
-		FIFTY_TO_75K = 7, "$50,000 to $74,999"
-		SEVENTYFIVE_PLUS = 8, "$75,000 or more"
+		LESS_THAN_10K = 1, _("Less than $10,000")
+		TEN_TO_15K = 2, _("$10,000 to $14,999")
+		FIFTEEN_TO_20K = 3, _("$15,000 to $19,999")
+		TWENTY_TO_25K = 4, _("$20,000 to $24,999")
+		TWENTYFIVE_TO_35K = 5, _("$25,000 to $34,999")
+		THIRTYFIVE_TO_50K = 6, _("$35,000 to $49,999")
+		FIFTY_TO_75K = 7, _("$50,000 to $74,999")
+		SEVENTYFIVE_PLUS = 8, _("$75,000 or more")
 
 	patient = models.OneToOneField(
 		Patient,

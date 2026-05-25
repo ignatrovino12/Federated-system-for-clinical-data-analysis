@@ -57,18 +57,6 @@
                         {% endif %}
                     </div>
                 </div>
-
-                <!-- Assignment Info -->
-                <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p class="text-sm text-blue-800 font-semibold mb-1">{% trans "Assigned Doctor" %}</p>
-                    <p class="text-blue-900">
-                        {% if patient.assigned_doctor %}
-                            Dr. {{ patient.assigned_doctor.get_full_name|default:patient.assigned_doctor.username }}
-                        {% else %}
-                            {% trans "Not assigned" %}
-                        {% endif %}
-                    </p>
-                </div>
                 
                 <!-- Personal Information -->
                 <div class="mb-6 pb-6 border-b-2 border-gray-200">
@@ -88,7 +76,7 @@
                                 {% if show_full_data %}
                                     {{ patient.data_nasterii|date:"d M Y" }} ({{ patient.get_age }} years)
                                 {% else %}
-                                    {{ patient.get_age }} years old
+                                    {{ patient.get_age }} {% trans "years old" %}
                                 {% endif %}
                             </p>
                         </div>
@@ -110,7 +98,7 @@
                                     {{ patient.CNP }}
                                 {% else %}
                                     <span class="text-yellow-700">{{ patient.get_masked_cnp }}</span>
-                                    <span class="text-xs text-gray-500 ml-2">(masked for privacy)</span>
+                                    <span class="text-xs text-gray-500 ml-2">({% trans "masked for privacy" %})</span>
                                 {% endif %}
                             </p>
                         </div>
@@ -131,7 +119,7 @@
                                     {{ patient.numar_ci }}
                                 {% else %}
                                     <span class="text-yellow-700">******</span>
-                                    <span class="text-xs text-gray-500 ml-2">(masked)</span>
+                                    <span class="text-xs text-gray-500 ml-2">({% trans "masked" %})</span>
                                 {% endif %}
                             </p>
                         </div>
@@ -159,12 +147,12 @@
                                     {% if patient.telefon %}
                                         <a href="tel:{{ patient.telefon }}" class="text-primary hover:underline">{{ patient.telefon }}</a>
                                     {% else %}
-                                        <span class="text-gray-400">Not provided</span>
+                                        <span class="text-gray-400">{% trans "Not provided" %}</span>
                                     {% endif %}
                                 {% else %}
                                     <span class="text-yellow-700">{{ patient.get_masked_phone }}</span>
                                     {% if patient.telefon %}
-                                        <span class="text-xs text-gray-500 ml-2">(masked)</span>
+                                        <span class="text-xs text-gray-500 ml-2">({% trans "masked" %})</span>
                                     {% endif %}
                                 {% endif %}
                             </p>
@@ -176,12 +164,12 @@
                                     {% if patient.email %}
                                         <a href="mailto:{{ patient.email }}" class="text-primary hover:underline">{{ patient.email }}</a>
                                     {% else %}
-                                        <span class="text-gray-400">Not provided</span>
+                                        <span class="text-gray-400">{% trans "Not provided" %}</span>
                                     {% endif %}
                                 {% else %}
                                     <span class="text-yellow-700">{{ patient.get_masked_email }}</span>
                                     {% if patient.email %}
-                                        <span class="text-xs text-gray-500 ml-2">(masked)</span>
+                                        <span class="text-xs text-gray-500 ml-2">({% trans "masked" %})</span>
                                     {% endif %}
                                 {% endif %}
                             </p>

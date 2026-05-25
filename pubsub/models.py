@@ -7,6 +7,7 @@ from django.conf import settings
 import hmac
 import hashlib
 import logging
+from django.utils.translation import gettext_lazy as _
 
 
 class AccessLog(models.Model):
@@ -49,27 +50,27 @@ class Patient(models.Model):
     # Validators for personal identification fields
     cnp_validator = RegexValidator(
         regex=r'^\d{13}$',
-        message='CNP-ul trebuie să aibă exact 13 cifre'
+        message=_('CNP must be exactly 13 digits')
     )
     
     serie_ci_validator = RegexValidator(
         regex=r'^[A-Z]{2}$',
-        message='Serie CI trebuie să aibă exact 2 litere majuscule'
+        message=_('CI series must be exactly 2 uppercase letters')
     )
     
     numar_ci_validator = RegexValidator(
         regex=r'^\d{6}$',
-        message='Număr CI trebuie să aibă exact 6 cifre'
+        message=_('CI number must be exactly 6 digits')
     )
     
     phone_validator = RegexValidator(
         regex=r'^(\+?[1-9]\d{1,14}|0\d{9,14})$',
-        message='Introduceți un număr de telefon valid în format internațional (ex: +40712345678)'
+        message=_('Enter a valid phone number in international format (e.g., +40712345678)')
     )
     
     email_validator = RegexValidator(
         regex=r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-        message='Introduceți o adresă de email validă'
+        message=_('Enter a valid email address')
     )
     
     # Primary key 
@@ -91,7 +92,7 @@ class Patient(models.Model):
         max_length=13, 
         unique=True, 
         validators=[cnp_validator],
-        help_text="Cod Numeric Personal (13 digits)"
+        help_text=_("CNP (13 digits)")
     )
     nume = models.CharField(max_length=100, help_text="Last name")
     prenume = models.CharField(max_length=100, help_text="First name")

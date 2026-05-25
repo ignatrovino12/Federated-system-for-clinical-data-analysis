@@ -1,7 +1,7 @@
 {% extends 'main/base.html' %}
 {% load i18n %}
 
-{% block title %}{% blocktrans %}Medical Data - {{ patient.get_full_name }}{% endblocktrans %}{% endblock %}
+{% block title %}{% blocktrans with patient_name=patient.get_full_name %}Medical Data - {{ patient_name }}{% endblocktrans %}{% endblock %}
 
 {% block content %}
 <div class="max-w-6xl mx-auto">
@@ -21,7 +21,7 @@
 
         <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <p class="text-sm text-blue-800">
-                Patient: <strong>{{ patient.get_full_name }}</strong> | CNP: <strong>{{ patient.get_masked_cnp }}</strong>
+                {% trans "Patient:" %} <strong>{{ patient.get_full_name }}</strong> | {% trans "CNP:" %} <strong>{{ patient.get_masked_cnp }}</strong>
             </p>
         </div>
 
