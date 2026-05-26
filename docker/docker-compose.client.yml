@@ -1,0 +1,216 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-healthcheck_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - client_internal
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - client_internal
+
+  web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ml
+    command: sh -c "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ..:/app
+    ports:
+      - "${WEB_PORT:-8000}:8000"
+    env_file:
+      - ./.env
+      - ../.env
+      - ../healthcheck/.env
+      - ../clinical_ai/.env
+      - ../pubsub/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DB_HOST=postgres
+      - DB_NAME=${DB_NAME:-healthcheck_db}
+      - DB_PORT=5432
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - FLOWER_SERVER_ADDRESS=${FLOWER_SERVER_ADDRESS:-flower-server:8080}
+      - FLOWER_CONTROL_URL=${FLOWER_CONTROL_URL:-http://flower-server:8081}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-models}
+    networks:
+      - client_internal
+      - healthcheck_federated_net
+
+  celery:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: celery -A healthcheck worker --loglevel=info
+    volumes:
+      - ..:/app
+    env_file:
+      - ./.env
+      - ../.env
+      - ../healthcheck/.env
+      - ../clinical_ai/.env
+      - ../pubsub/.env
+    depends_on:
+      - postgres
+      - redis
+      - web
+    environment:
+      - DB_HOST=postgres
+      - DB_NAME=${DB_NAME:-healthcheck_db}
+      - DB_PORT=5432
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - FLOWER_SERVER_ADDRESS=${FLOWER_SERVER_ADDRESS:-flower-server:8080}
+      - FLOWER_CONTROL_URL=${FLOWER_CONTROL_URL:-http://flower-server:8081}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-models}
+    networks:
+      - client_internal
+      - healthcheck_federated_net
+
+  celery-beat:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: celery -A healthcheck beat --loglevel=info
+    volumes:
+      - ..:/app
+    env_file:
+      - ./.env
+      - ../.env
+      - ../healthcheck/.env
+      - ../clinical_ai/.env
+      - ../pubsub/.env
+    depends_on:
+      - postgres
+      - redis
+      - web
+    environment:
+      - DB_HOST=postgres
+      - DB_NAME=${DB_NAME:-healthcheck_db}
+      - DB_PORT=5432
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - FLOWER_SERVER_ADDRESS=${FLOWER_SERVER_ADDRESS:-flower-server:8080}
+      - FLOWER_CONTROL_URL=${FLOWER_CONTROL_URL:-http://flower-server:8081}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-models}
+    networks:
+      - client_internal
+      - healthcheck_federated_net
+
+  federated-client:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ml
+    command: sh -c "python manage.py migrate --noinput && python manage.py run_flower_client --model alex5050 --server-address ${FLOWER_SERVER_ADDRESS:-flower-server:8080} --min-samples ${FLOWER_MIN_SAMPLES:-1}"
+    volumes:
+      - ..:/app
+    env_file:
+      - ./.env
+      - ../.env
+      - ../healthcheck/.env
+      - ../clinical_ai/.env
+      - ../pubsub/.env
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - DB_HOST=postgres
+      - DB_NAME=${DB_NAME:-healthcheck_db}
+      - DB_PORT=5432
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - FLOWER_SERVER_ADDRESS=${FLOWER_SERVER_ADDRESS:-flower-server:8080}
+      - FLOWER_MIN_SAMPLES=${FLOWER_MIN_SAMPLES:-1}
+      - FLOWER_CONTROL_URL=${FLOWER_CONTROL_URL:-http://flower-server:8081}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-models}
+    networks:
+      - client_internal
+      - healthcheck_federated_net
+    profiles:
+      - federated
+
+  federated-listener:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ml
+    command: sh -c "python manage.py migrate --noinput && python manage.py listen_federated_training"
+    volumes:
+      - ..:/app
+    env_file:
+      - ./.env
+      - ../.env
+      - ../healthcheck/.env
+      - ../clinical_ai/.env
+      - ../pubsub/.env
+    depends_on:
+      - postgres
+      - redis
+      - web
+    environment:
+      - DB_HOST=postgres
+      - DB_NAME=${DB_NAME:-healthcheck_db}
+      - DB_PORT=5432
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - FLOWER_SERVER_ADDRESS=${FLOWER_SERVER_ADDRESS:-flower-server:8080}
+      - FLOWER_CONTROL_URL=${FLOWER_CONTROL_URL:-http://flower-server:8081}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-models}
+    networks:
+      - client_internal
+      - healthcheck_federated_net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  client_internal:
+  healthcheck_federated_net:
+    external: true

@@ -29,3 +29,10 @@ docker exec healthcheck-web python manage.py compilemessages
 
 docker exec healthcheck-web bash -lc "msgfmt -o /app/locale/ro/LC_MESSAGES/django.mo /app/locale/ro/LC_MESSAGES/django.po"
 docker restart healthcheck-web
+
+
+multiple clients for testing
+docker compose --env-file client1.env -f docker-compose.client.yml -p client1 up -d
+docker compose --env-file client2.env -f docker-compose.client.yml -p client2 up -d
+
+

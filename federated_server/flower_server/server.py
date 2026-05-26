@@ -279,12 +279,16 @@ def create_minio_client() -> Optional[Minio]:
 
 def create_strategy(minio_client: Optional[Minio] = None) -> FederatedStrategy:
     """Create and configure the federated learning strategy."""
+    min_fit_clients = int(os.getenv("FLOWER_MIN_FIT_CLIENTS", "1"))
+    min_evaluate_clients = int(os.getenv("FLOWER_MIN_EVALUATE_CLIENTS", str(min_fit_clients)))
+    min_available_clients = int(os.getenv("FLOWER_MIN_AVAILABLE_CLIENTS", str(min_fit_clients)))
+
     strategy = FederatedStrategy(
         fraction_fit=1.0,  # Sample a percentage of available clients per round (when a lot of clinics are available, we can reduce this to speed up rounds and reduce load)
         fraction_evaluate=1.0,  # Sample percentage for evaluation to avoid overloading
-        min_fit_clients=1,  # Minimum 1 client to start training
-        min_evaluate_clients=1,  # Minimum 1 client for evaluation
-        min_available_clients=1,  # Wait for at least 1 client
+        min_fit_clients=min_fit_clients,
+        min_evaluate_clients=min_evaluate_clients,
+        min_available_clients=min_available_clients,
         evaluate_metrics_aggregation_fn=weighted_average,
         on_fit_config_fn=_fit_config,
         minio_client=minio_client,
@@ -311,6 +315,12 @@ def start_server(
     logger.info("=" * 60)
     logger.info(f"Server Address: {host}:{port}")
     logger.info(f"Number of Rounds: {num_rounds}")
+    logger.info(
+        "Client thresholds: min_fit=%s, min_evaluate=%s, min_available=%s",
+        os.getenv("FLOWER_MIN_FIT_CLIENTS", "1"),
+        os.getenv("FLOWER_MIN_EVALUATE_CLIENTS", os.getenv("FLOWER_MIN_FIT_CLIENTS", "1")),
+        os.getenv("FLOWER_MIN_AVAILABLE_CLIENTS", os.getenv("FLOWER_MIN_FIT_CLIENTS", "1")),
+    )
     logger.info("Model Family: Auto-detected from client weights (Alex5050 or Mustafa)")
     logger.info("=" * 60)
 
