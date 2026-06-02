@@ -55,6 +55,7 @@ services:
       - DB_HOST=postgres
       - DB_NAME=${DB_NAME:-healthcheck_db}
       - DB_PORT=5432
+      - ALLOWED_HOSTS=localhost,127.0.0.1,healthcheck-web,web,healthcheck-flower-server,flower-server,host.docker.internal,client1-web-1,client2-web-1
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - FLOWER_SERVER_ADDRESS=${FLOWER_SERVER_ADDRESS:-flower-server:8080}
@@ -89,6 +90,7 @@ services:
       - DB_HOST=postgres
       - DB_NAME=${DB_NAME:-healthcheck_db}
       - DB_PORT=5432
+      - ALLOWED_HOSTS=localhost,127.0.0.1,healthcheck-web,web,healthcheck-flower-server,flower-server,host.docker.internal,client1-web-1,client2-web-1
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - FLOWER_SERVER_ADDRESS=${FLOWER_SERVER_ADDRESS:-flower-server:8080}
@@ -123,6 +125,7 @@ services:
       - DB_HOST=postgres
       - DB_NAME=${DB_NAME:-healthcheck_db}
       - DB_PORT=5432
+      - ALLOWED_HOSTS=localhost,127.0.0.1,healthcheck-web,web,healthcheck-flower-server,flower-server,host.docker.internal,client1-web-1,client2-web-1
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - FLOWER_SERVER_ADDRESS=${FLOWER_SERVER_ADDRESS:-flower-server:8080}
@@ -135,42 +138,6 @@ services:
     networks:
       - client_internal
       - healthcheck_federated_net
-
-  federated-client:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.ml
-    command: sh -c "python manage.py migrate --noinput && python manage.py run_flower_client --model alex5050 --server-address ${FLOWER_SERVER_ADDRESS:-flower-server:8080} --min-samples ${FLOWER_MIN_SAMPLES:-1}"
-    volumes:
-      - ..:/app
-    env_file:
-      - ./.env
-      - ../.env
-      - ../healthcheck/.env
-      - ../clinical_ai/.env
-      - ../pubsub/.env
-    depends_on:
-      - postgres
-      - redis
-    environment:
-      - DB_HOST=postgres
-      - DB_NAME=${DB_NAME:-healthcheck_db}
-      - DB_PORT=5432
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - FLOWER_SERVER_ADDRESS=${FLOWER_SERVER_ADDRESS:-flower-server:8080}
-      - FLOWER_MIN_SAMPLES=${FLOWER_MIN_SAMPLES:-1}
-      - FLOWER_CONTROL_URL=${FLOWER_CONTROL_URL:-http://flower-server:8081}
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
-      - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
-      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-models}
-    networks:
-      - client_internal
-      - healthcheck_federated_net
-    profiles:
-      - federated
 
   federated-listener:
     build:
@@ -179,6 +146,8 @@ services:
     command: sh -c "python manage.py migrate --noinput && python manage.py listen_federated_training"
     volumes:
       - ..:/app
+    ports:
+      - "${FLOWER_CLIENT_PROMETHEUS_PORT:-8110}:${FLOWER_CLIENT_PROMETHEUS_PORT:-8110}"
     env_file:
       - ./.env
       - ../.env
@@ -193,10 +162,14 @@ services:
       - DB_HOST=postgres
       - DB_NAME=${DB_NAME:-healthcheck_db}
       - DB_PORT=5432
+      - ALLOWED_HOSTS=localhost,127.0.0.1,healthcheck-web,web,healthcheck-flower-server,flower-server,host.docker.internal,client1-web-1,client2-web-1
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - FLOWER_SERVER_ADDRESS=${FLOWER_SERVER_ADDRESS:-flower-server:8080}
       - FLOWER_CONTROL_URL=${FLOWER_CONTROL_URL:-http://flower-server:8081}
+      - FLOWER_MIN_SAMPLES=${FLOWER_MIN_SAMPLES:-1}
+      - FEDERATED_SAMPLING_STRENGTH=${FEDERATED_SAMPLING_STRENGTH:-1.0}
+      - FLOWER_CLIENT_PROMETHEUS_PORT=${FLOWER_CLIENT_PROMETHEUS_PORT:-8110}
       - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}

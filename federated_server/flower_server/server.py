@@ -339,22 +339,24 @@ def start_server(
     if weekly_scheduler_enabled:
         start_weekly_scheduler(coordinator)
     
-    # Create strategy with MinIO persistence; instruct it which final round to persist
-    strategy = create_strategy(minio_client=minio_client)
-    strategy.final_round = num_rounds
-    
-    # Configure server
-    config = ServerConfig(
-        num_rounds=num_rounds,
-        round_timeout=600,  # 10 minutes per round
-    )
-    
-    # Start server
-    fl.server.start_server(
-        server_address=f"{host}:{port}",
-        config=config,
-        strategy=strategy,
-    )
+    while True:
+        # Create strategy with MinIO persistence; instruct it which final round to persist
+        strategy = create_strategy(minio_client=minio_client)
+        strategy.final_round = num_rounds
+
+        # Configure one federated training session
+        config = ServerConfig(
+            num_rounds=num_rounds,
+            round_timeout=600,  # 10 minutes per round
+        )
+
+        # Run one federated session and then wait for the next client wave
+        fl.server.start_server(
+            server_address=f"{host}:{port}",
+            config=config,
+            strategy=strategy,
+        )
+        logger.info("Federated session completed; keeping server alive for the next trigger")
 
 
 if __name__ == "__main__":

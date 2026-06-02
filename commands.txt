@@ -35,4 +35,10 @@ multiple clients for testing
 docker compose --env-file client1.env -f docker-compose.client.yml -p client1 up -d
 docker compose --env-file client2.env -f docker-compose.client.yml -p client2 up -d
 
+metrics report
+docker compose --env-file client1.env -f docker-compose.client.yml -p client1 exec -T web python manage.py compute_core_model_quality --model alex5050 --bootstrap-samples 1000 --test-size 0.2 --seed 42
+
+Access control rbac + django guardian
+python manage.py migrate
+python manage.py bootstrap_roles
 

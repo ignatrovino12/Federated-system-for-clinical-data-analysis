@@ -9,6 +9,15 @@ from django.core.management.base import BaseCommand, CommandError
 from clinical_ai.models import PatientClinicalRecord
 
 
+def _sampling_strength() -> float:
+    raw_value = os.getenv("FEDERATED_SAMPLING_STRENGTH", "1.0")
+    try:
+        value = float(raw_value)
+    except ValueError:
+        value = 1.0
+    return max(0.0, min(2.0, value))
+
+
 def _explicit_diabetes_label(record: PatientClinicalRecord) -> Optional[float]:
     """Use explicit diagnosis status as federated target label."""
     if record.diabetes_status == PatientClinicalRecord.DiabetesStatus.HAS:
@@ -32,8 +41,10 @@ def _build_feature_row(record: PatientClinicalRecord, model_type: str) -> Option
 
 
 def _training_sample_weight(record: PatientClinicalRecord) -> float:
-    """Downweight records that have already participated in training many times."""
-    return 1.0 / (1.0 + float(record.federated_train_count or 0))
+    """Downweight frequently used records; strength controls how aggressively."""
+    count = float(record.federated_train_count or 0)
+    strength = _sampling_strength()
+    return 1.0 / ((1.0 + count) ** strength)
 
 
 def _load_feature_scaler(model_type: str):
@@ -221,6 +232,7 @@ class Command(BaseCommand):
             f"Skipped features: {skipped_missing_features} | "
             f"Skipped labels: {skipped_missing_label} | Skipped no consent: {skipped_no_consent}"
         )
+        self.stdout.write(f"Sampling strength: {_sampling_strength():.2f}")
         self.stdout.write(f"Connecting to Flower server: {server_address}")
 
         client = create_client(
@@ -230,6 +242,7 @@ class Command(BaseCommand):
             record_ids=record_ids,
             test_split=test_split,
             batch_size=batch_size,
+            sampling_strength=_sampling_strength(),
         )
 
         fl.client.start_client(server_address=server_address, client=client.to_client())

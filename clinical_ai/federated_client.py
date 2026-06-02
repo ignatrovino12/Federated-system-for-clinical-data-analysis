@@ -5,8 +5,10 @@ and send updated weights to the central Flower server.
 """
 
 import logging
+import os
 from collections import OrderedDict
 from pathlib import Path
+from time import perf_counter
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import flwr as fl
@@ -14,7 +16,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader, TensorDataset, WeightedRandomSampler
+
+from healthcheck.metrics import record_client_evaluate, record_client_fit
 
 logging.basicConfig(
     level=logging.INFO,
@@ -81,7 +85,7 @@ def train(
     epochs: int = 1,
     lr: float = 0.001,
     device: str = "cpu",
-) -> float:
+) -> Tuple[float, List[int]]:
     model.to(device)
     model.train()
     # compute class imbalance from dataset labels and create pos-weight
@@ -98,10 +102,14 @@ def train(
 
     total_loss = 0.0
     num_batches = 0
+    used_record_ids = set()
 
     for epoch in range(epochs):
         for batch in train_loader:
-            if len(batch) == 3:
+            if len(batch) == 4:
+                batch_x, batch_y, batch_weights, batch_record_ids = batch
+                used_record_ids.update(int(record_id) for record_id in batch_record_ids.cpu().tolist())
+            elif len(batch) == 3:
                 batch_x, batch_y, batch_weights = batch
             else:
                 batch_x, batch_y = batch
@@ -126,7 +134,7 @@ def train(
 
         logger.info(f"Epoch {epoch + 1}/{epochs} - Loss: {total_loss / (num_batches or 1):.4f}")
 
-    return total_loss / (num_batches or 1)
+    return total_loss / (num_batches or 1), sorted(used_record_ids)
 
 
 def test(
@@ -158,47 +166,138 @@ def test(
 
 
 class FederatedClient(fl.client.NumPyClient):
-    def __init__(self, model: nn.Module, train_loader: DataLoader, test_loader: DataLoader, training_record_ids: Optional[Sequence[int]] = None):
+    def __init__(
+        self,
+        model: nn.Module,
+        train_loader: DataLoader,
+        test_loader: DataLoader,
+        model_name: str,
+        sampling_strength: float = 1.0,
+        training_record_ids: Optional[Sequence[int]] = None,
+    ):
         self.model = model
         self.train_loader = train_loader
         self.test_loader = test_loader
+        self.batch_size = int(train_loader.batch_size or 32)
+        self.model_name = model_name
+        self.sampling_strength = max(0.0, min(2.0, float(sampling_strength)))
+        self.clinic_id = os.getenv("CLINIC_ID", os.getenv("HOSTNAME", "clinic"))
         self.training_record_ids = list(training_record_ids or [])
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    def _parameter_bytes(self, weights: List[np.ndarray]) -> int:
+        return int(sum(array.nbytes for array in weights))
+
+    def _rebuild_weighted_train_loader(self, sample_weights: np.ndarray) -> None:
+        # Prefer low-round samples by sampling inversely to federated_train_count-derived weights.
+        sampler_weights = torch.from_numpy(np.clip(sample_weights, 1e-6, None).astype(np.float64))
+        sampler = WeightedRandomSampler(
+            weights=sampler_weights,
+            num_samples=len(sample_weights),
+            replacement=True,
+        )
+        self.train_loader = DataLoader(
+            self.train_loader.dataset,
+            batch_size=self.batch_size,
+            sampler=sampler,
+        )
+
+    def _refresh_training_weights(self) -> None:
+        """Recompute local sample weights from persisted federated_train_count values."""
+        if not self.training_record_ids:
+            return
+        if len(self.training_record_ids) != len(self.train_loader.dataset):
+            logger.warning(
+                "Skipping weight refresh: training_record_ids (%s) and train dataset size (%s) differ",
+                len(self.training_record_ids),
+                len(self.train_loader.dataset),
+            )
+            return
+
+        try:
+            from clinical_ai.models import PatientClinicalRecord
+
+            id_to_count = {
+                row["id"]: int(row["federated_train_count"] or 0)
+                for row in PatientClinicalRecord.objects.filter(id__in=self.training_record_ids).values(
+                    "id", "federated_train_count"
+                )
+            }
+
+            refreshed_weights = np.asarray(
+                [
+                    1.0 / ((1.0 + float(id_to_count.get(record_id, 0))) ** self.sampling_strength)
+                    for record_id in self.training_record_ids
+                ],
+                dtype=np.float32,
+            )
+
+            dataset_tensors = list(self.train_loader.dataset.tensors)
+            dataset_tensors[2] = torch.from_numpy(refreshed_weights).float()
+            self.train_loader.dataset.tensors = tuple(dataset_tensors)
+            self._rebuild_weighted_train_loader(refreshed_weights)
+        except Exception:
+            logger.exception("Failed to refresh sample weights from federated training counters")
 
     def get_parameters(self, config: Dict) -> List[np.ndarray]:
         return get_weights(self.model)
 
     def fit(self, parameters: List[np.ndarray], config: Dict) -> Tuple[List[np.ndarray], int, Dict]:
         logger.info("Client fit() called")
+        started_at = perf_counter()
+        self._refresh_training_weights()
         set_weights(self.model, parameters)
-        loss = train(
+        loss, used_record_ids = train(
             self.model,
             self.train_loader,
             epochs=int(config.get("local_epochs", 1)),
             lr=float(config.get("learning_rate", 0.001)),
             device=self.device,
         )
+        updated_weights = get_weights(self.model)
+        duration_seconds = perf_counter() - started_at
         if self.training_record_ids:
             try:
                 from django.db.models import F
                 from django.utils import timezone
                 from clinical_ai.models import PatientClinicalRecord
 
-                PatientClinicalRecord.objects.filter(id__in=self.training_record_ids).update(
+                updated_rows = PatientClinicalRecord.objects.filter(id__in=used_record_ids).update(
                     federated_train_count=F("federated_train_count") + 1,
                     last_federated_train_at=timezone.now(),
                 )
+                logger.info("Updated federated counters for %s sampled records", updated_rows)
             except Exception:
                 logger.exception("Failed to update federated training counters")
         num_examples = len(self.train_loader.dataset)
-        return get_weights(self.model), num_examples, {"loss": loss}
+        record_client_fit(
+            clinic=self.clinic_id,
+            model=self.model_name,
+            duration_seconds=duration_seconds,
+            num_examples=num_examples,
+            loss=loss,
+            parameter_bytes_sent=self._parameter_bytes(updated_weights),
+        )
+        return updated_weights, num_examples, {"loss": loss, "fit_duration_seconds": duration_seconds}
 
     def evaluate(self, parameters: List[np.ndarray], config: Dict) -> Tuple[float, int, Dict]:
         logger.info("Client evaluate() called")
+        started_at = perf_counter()
         set_weights(self.model, parameters)
         loss, accuracy = test(self.model, self.test_loader, device=self.device)
+        duration_seconds = perf_counter() - started_at
+        parameter_bytes_received = self._parameter_bytes(parameters)
         num_examples = len(self.test_loader.dataset) if self.test_loader else 0
-        return loss, num_examples, {"accuracy": accuracy}
+        record_client_evaluate(
+            clinic=self.clinic_id,
+            model=self.model_name,
+            duration_seconds=duration_seconds,
+            num_examples=num_examples,
+            loss=loss,
+            accuracy=accuracy,
+            parameter_bytes_received=parameter_bytes_received,
+        )
+        return loss, num_examples, {"accuracy": accuracy, "evaluate_duration_seconds": duration_seconds}
 
 
 def create_client(
@@ -208,6 +307,7 @@ def create_client(
     record_ids: Optional[Sequence[int]] = None,
     test_split: float = 0.2,
     batch_size: int = 32,
+    sampling_strength: float = 1.0,
 ) -> FederatedClient:
     if model_type.lower() == "alex5050":
         model = DiabetesNet(input_size=21)
@@ -260,11 +360,25 @@ def create_client(
         torch.from_numpy(train_x).float(),
         torch.from_numpy(train_y).float(),
         torch.from_numpy(train_weights).float(),
+        torch.tensor(train_record_ids, dtype=torch.long),
     )
     test_dataset = TensorDataset(torch.from_numpy(test_x).float(), torch.from_numpy(test_y).float())
 
     # Use each training sample once per epoch and downweight patients that have already been trained many times.
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    train_sampler_weights = np.clip(train_weights, 1e-6, None).astype(np.float64)
+    train_sampler = WeightedRandomSampler(
+        weights=torch.from_numpy(train_sampler_weights),
+        num_samples=len(train_sampler_weights),
+        replacement=True,
+    )
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_sampler)
     test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
-    return FederatedClient(model, train_loader, test_loader, training_record_ids=train_record_ids)
+    return FederatedClient(
+        model,
+        train_loader,
+        test_loader,
+        model_name=model_type.lower(),
+        sampling_strength=sampling_strength,
+        training_record_ids=train_record_ids,
+    )

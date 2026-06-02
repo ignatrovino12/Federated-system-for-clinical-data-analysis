@@ -1,8 +1,10 @@
 import logging
+import os
 import time
 
 import requests
 from django.core.management.base import BaseCommand, CommandError
+from prometheus_client import start_http_server
 
 
 logger = logging.getLogger(__name__)
@@ -36,6 +38,13 @@ class Command(BaseCommand):
         poll_interval = max(5, int(options["poll_interval"]))
         once = options["once"]
         last_request_id = None
+
+        metrics_port = int(os.getenv("FLOWER_CLIENT_PROMETHEUS_PORT", "8110"))
+        try:
+            start_http_server(metrics_port, addr="0.0.0.0")
+            self.stdout.write(self.style.SUCCESS(f"Prometheus metrics available on 0.0.0.0:{metrics_port}/metrics"))
+        except OSError as exc:
+            logger.warning("Client metrics endpoint already bound on port %s: %s", metrics_port, exc)
 
         self.stdout.write(self.style.SUCCESS(f"Listening for training requests at {control_url}/training/latest"))
 

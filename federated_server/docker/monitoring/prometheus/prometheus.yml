@@ -1,16 +1,36 @@
 global:
-  scrape_interval: 15s
+  scrape_interval: 5s
   evaluation_interval: 15s
 
 scrape_configs:
-  - job_name: "healthcheck-django"
+  - job_name: "healthcheck-clinic-web"
     metrics_path: /metrics
     static_configs:
       - targets:
-          - healthcheck-web:8000
+          - host.docker.internal:8101
+        labels:
+          clinic: clinic1
+      - targets:
+          - host.docker.internal:8102
+        labels:
+          clinic: clinic2
+
+  - job_name: "healthcheck-clinic-flower-client"
+    metrics_path: /metrics
+    scrape_interval: 2s
+    static_configs:
+      - targets:
+          - host.docker.internal:8111
+        labels:
+          clinic: clinic1
+      - targets:
+          - host.docker.internal:8112
+        labels:
+          clinic: clinic2
 
   - job_name: "healthcheck-flower"
     metrics_path: /metrics
+    scrape_interval: 2s
     static_configs:
       - targets:
           - healthcheck-flower-server:8001
