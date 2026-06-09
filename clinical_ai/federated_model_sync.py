@@ -1,8 +1,13 @@
 import os
 from pathlib import Path
 from typing import Optional
-from minio import Minio
-from minio.error import S3Error
+
+try:
+    from minio import Minio
+    from minio.error import S3Error
+except ImportError:
+    Minio = None
+    S3Error = Exception
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 MODEL_ROOT = BASE_DIR / "machinelearning"
@@ -23,6 +28,11 @@ def create_minio_client(
     secret_key: Optional[str] = None,
     use_ssl: Optional[bool] = None,
 ) -> object:
+
+    if Minio is None:
+        raise RuntimeError(
+            "MinIO Python package is not installed. Install `minio` to enable federated model sync."
+        )
 
     endpoint = endpoint or os.getenv("MINIO_ENDPOINT", "localhost:9000")
     access_key = access_key or os.getenv("MINIO_ACCESS_KEY")

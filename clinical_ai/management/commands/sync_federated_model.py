@@ -1,5 +1,6 @@
 import os
 
+from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 
 
@@ -56,3 +57,10 @@ class Command(BaseCommand):
             raise CommandError(f"Failed to sync federated model: {exc}") from exc
 
         self.stdout.write(self.style.SUCCESS(f"Latest federated model saved to {synced_path}"))
+
+        try:
+            call_command("fit_model_calibration", model=options["model"])
+        except Exception as exc:
+            raise CommandError(f"Synced model, but calibration failed for {options['model']}: {exc}") from exc
+
+        self.stdout.write(self.style.SUCCESS(f"Calibration refreshed for {options['model']}"))

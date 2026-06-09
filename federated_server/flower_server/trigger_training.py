@@ -57,7 +57,7 @@ def main() -> int:
         "test_split": args.test_split,
         "batch_size": args.batch_size,
         "model_gap_seconds": max(0, args.model_gap_seconds),
-        "sync_latest_model": not args.no_sync_latest_model,
+        "sync_latest_model": False,
         "trigger": "manual-terminal",
         "source": "manual-command",
         "requested_by": args.requested_by,

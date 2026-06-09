@@ -1,6 +1,24 @@
 {% extends "admin/change_list.html" %}
 {% load i18n %}
 
+{% block object-tools %}
+  {% if pending_model_updates %}
+    <ul class="messagelist">
+      <li class="warning">
+        {% trans "A newer federated model is available." %}
+        {% for update in pending_model_updates %}
+          <div>
+            <strong>{{ update.model }}</strong>
+            - {{ update.updated_at }}
+            <a href="{% url 'admin:clinical_ai_patientclinicalrecord_sync_model' model=update.model %}">{% trans "Sync now" %}</a>
+          </div>
+        {% endfor %}
+      </li>
+    </ul>
+  {% endif %}
+  {{ block.super }}
+{% endblock %}
+
 {% block object-tools-items %}
   <li>
     <a href="{% url 'admin:clinical_ai_patientclinicalrecord_sync_model' model='alex5050' %}" class="addlink">

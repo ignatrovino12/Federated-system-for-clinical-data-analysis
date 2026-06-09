@@ -4,6 +4,7 @@ djangorestframework==3.16.1
 
 # Database
 psycopg2-binary==2.9.10
+minio==7.2.7
 
 # Task Queue
 celery==5.4.0

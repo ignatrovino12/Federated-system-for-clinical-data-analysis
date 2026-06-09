@@ -10,6 +10,7 @@ import torch.nn as nn
 
 from .federated_client import DiabetesNet as FederatedAlexDiabetesNet
 from .federated_client import MustafaNet as FederatedMustafaDiabetesNet
+from .calibration import apply_calibration_state, load_calibration_state
 from .federated_model_sync import get_local_federated_model_path
 
 
@@ -52,10 +53,17 @@ def _alex_model_signature() -> Tuple[Tuple[bool, Optional[float], Optional[int]]
     model_path = model_dir / "best_alex5050_model.pth"
     federated_model_path = get_local_federated_model_path("alex5050")
     scaler_path = model_dir / "alex5050_scaler.joblib"
-    return (_file_signature(federated_model_path), _file_signature(model_path), _file_signature(scaler_path))
+    calibration_path = model_dir / "calibration.json"
+    return (
+        _file_signature(federated_model_path),
+        _file_signature(model_path),
+        _file_signature(scaler_path),
+        _file_signature(calibration_path),
+    )
 
 
 def _mustafa_model_signature() -> Tuple[
+    Tuple[bool, Optional[float], Optional[int]],
     Tuple[bool, Optional[float], Optional[int]],
     Tuple[bool, Optional[float], Optional[int]],
     Tuple[bool, Optional[float], Optional[int]],
@@ -68,20 +76,24 @@ def _mustafa_model_signature() -> Tuple[
             model_path = artifact_dir / "mustafa_model.pth"
             scaler_path = artifact_dir / "scaler.joblib"
             metadata_path = artifact_dir / "metadata.json"
+            calibration_path = artifact_dir / "calibration.json"
             return (
                 _file_signature(federated_model_path),
                 _file_signature(model_path),
                 _file_signature(scaler_path),
                 _file_signature(metadata_path),
+                _file_signature(calibration_path),
             )
     model_path = artifact_dirs[0] / "mustafa_model.pth"
     scaler_path = artifact_dirs[0] / "scaler.joblib"
     metadata_path = artifact_dirs[0] / "metadata.json"
+    calibration_path = artifact_dirs[0] / "calibration.json"
     return (
         _file_signature(federated_model_path),
         _file_signature(model_path),
         _file_signature(scaler_path),
         _file_signature(metadata_path),
+        _file_signature(calibration_path),
     )
 
 
@@ -172,6 +184,8 @@ def _load_alex_artifacts_cached(signature):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     scaler = joblib.load(scaler_path)
     scaler_feature_names = getattr(scaler, "feature_names_in_", None)
+    calibration_path = model_dir / "calibration.json"
+    calibration = load_calibration_state(calibration_path)
     if federated_model_path.exists():
         model = FederatedAlexDiabetesNet(input_size=len(feature_columns)).to(device)
         state_dict = torch.load(federated_model_path, map_location=device)
@@ -193,6 +207,8 @@ def _load_alex_artifacts_cached(signature):
         "model": model,
         "device": device,
         "outputs_probability": outputs_probability,
+        "calibration": calibration,
+        "calibration_path": calibration_path,
     }
 
 
@@ -233,6 +249,8 @@ def _load_mustafa_artifacts_cached(signature):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     scaler = joblib.load(scaler_path)
     scaler_feature_names = getattr(scaler, "feature_names_in_", None)
+    calibration_path = artifact_dir / "calibration.json"
+    calibration = load_calibration_state(calibration_path)
     state_dict = torch.load(model_path, map_location=device)
     if model_path == federated_model_path:
         model = FederatedMustafaDiabetesNet(input_size=len(feature_columns)).to(device)
@@ -256,6 +274,8 @@ def _load_mustafa_artifacts_cached(signature):
         "model": model,
         "device": device,
         "outputs_probability": outputs_probability,
+        "calibration": calibration,
+        "calibration_path": calibration_path,
     }
 
 
@@ -278,6 +298,18 @@ def _scale_payload_row(artifacts, payload, feature_columns):
     return artifacts["scaler"].transform(row[list(scaler_feature_names)])
 
 
+def _calibrated_probability(artifacts, scaled_row):
+    with torch.no_grad():
+        model_output = artifacts["model"](torch.tensor(scaled_row, dtype=torch.float32).to(artifacts["device"]))
+        calibrated = apply_calibration_state(
+            model_output.detach().cpu().numpy().ravel(),
+            outputs_probability=bool(artifacts.get("outputs_probability", False)),
+            calibration_state=artifacts.get("calibration"),
+        )
+
+    return float(calibrated.ravel()[0])
+
+
 def predict_alex_probability(payload):
     artifacts = _load_alex_artifacts()
     feature_columns = artifacts["feature_columns"]
@@ -288,19 +320,17 @@ def predict_alex_probability(payload):
         logger.warning("Scaler was fitted with different feature names; reordering input columns to scaler order")
     _validate_payload(payload, columns_to_use)
     scaled = _scale_payload_row(artifacts, payload, columns_to_use)
+    probability = _calibrated_probability(artifacts, scaled)
 
-    with torch.no_grad():
-        model_output = artifacts["model"](torch.tensor(scaled, dtype=torch.float32).to(artifacts["device"]))
-        if artifacts["outputs_probability"]:
-            probability = model_output.cpu().numpy().ravel()[0]
-        else:
-            probability = torch.sigmoid(model_output).cpu().numpy().ravel()[0]
+    calibration = artifacts.get("calibration")
+    threshold = float(getattr(calibration, "decision_threshold", artifacts["threshold"])) if calibration else artifacts["threshold"]
 
     return {
         "probability": float(probability),
         "probability_pct": round(float(probability) * 100, 2),
-        "threshold": artifacts["threshold"],
-        "prediction": int(probability >= artifacts["threshold"]),
+        "threshold": threshold,
+        "prediction": int(probability >= threshold),
+        "calibration_applied": bool(calibration),
     }
 
 
@@ -313,17 +343,15 @@ def predict_mustafa_probability(payload):
         logger.warning("Scaler was fitted with different feature names; reordering input columns to scaler order")
     _validate_payload(payload, columns_to_use)
     scaled = _scale_payload_row(artifacts, payload, columns_to_use)
+    probability = _calibrated_probability(artifacts, scaled)
 
-    with torch.no_grad():
-        model_output = artifacts["model"](torch.tensor(scaled, dtype=torch.float32).to(artifacts["device"]))
-        if artifacts["outputs_probability"]:
-            probability = model_output.cpu().numpy().ravel()[0]
-        else:
-            probability = torch.sigmoid(model_output).cpu().numpy().ravel()[0]
+    calibration = artifacts.get("calibration")
+    threshold = float(getattr(calibration, "decision_threshold", artifacts["threshold"])) if calibration else artifacts["threshold"]
 
     return {
         "probability": float(probability),
         "probability_pct": round(float(probability) * 100, 2),
-        "threshold": artifacts["threshold"],
-        "prediction": int(probability >= artifacts["threshold"]),
+        "threshold": threshold,
+        "prediction": int(probability >= threshold),
+        "calibration_applied": bool(calibration),
     }

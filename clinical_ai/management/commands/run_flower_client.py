@@ -15,7 +15,16 @@ def _sampling_strength() -> float:
         value = float(raw_value)
     except ValueError:
         value = 1.0
-    return max(0.0, min(2.0, value))
+    return max(0.0, min(4.0, value))
+
+
+def _training_sample_fraction() -> float:
+    raw_value = os.getenv("FEDERATED_TRAINING_SAMPLE_FRACTION", "0.5")
+    try:
+        value = float(raw_value)
+    except ValueError:
+        value = 0.5
+    return max(0.1, min(1.0, value))
 
 
 def _explicit_diabetes_label(record: PatientClinicalRecord) -> Optional[float]:
@@ -199,6 +208,12 @@ class Command(BaseCommand):
             features.append(row)
             labels.append(label)
             sample_weights.append(_training_sample_weight(record))
+            # Capture federated training counters for debugging per-clinic
+            try:
+                # store 0 when None for clearer stats
+                counts_list.append(float(record.federated_train_count or 0))
+            except NameError:
+                counts_list = [float(record.federated_train_count or 0)]
             record_ids.append(record.id)
 
         if len(features) < min_samples:
@@ -226,6 +241,28 @@ class Command(BaseCommand):
         y = np.asarray(labels, dtype=np.float32)
         sample_weight_array = np.asarray(sample_weights, dtype=np.float32)
 
+        # Emit debug info about federated_train_count distribution for this clinic
+        try:
+            counts = np.asarray(counts_list, dtype=np.float32)
+            zeros = int((counts == 0).sum())
+            total = counts.size
+            uniq = np.unique(counts)
+            self.stdout.write(
+                self.style.NOTICE(
+                    f"federated_train_count stats: min={float(counts.min())}, max={float(counts.max())}, zeros={zeros}/{total} ({zeros/total:.2%}), unique_sample={uniq[:10].tolist()}"
+                )
+            )
+        except Exception:
+            pass
+
+        # Shuffle the dataset before splitting into train/test so the training split isn't deterministically biased by database id ordering.
+        if len(x) > 1:
+            perm = np.random.RandomState(seed=None).permutation(len(x))
+            x = x[perm]
+            y = y[perm]
+            sample_weight_array = sample_weight_array[perm]
+            record_ids = [record_ids[i] for i in perm]
+
         self.stdout.write(self.style.SUCCESS("Prepared local federated dataset"))
         self.stdout.write(
             f"Model: {model_type} | Samples: {len(x)} | "
@@ -233,6 +270,7 @@ class Command(BaseCommand):
             f"Skipped labels: {skipped_missing_label} | Skipped no consent: {skipped_no_consent}"
         )
         self.stdout.write(f"Sampling strength: {_sampling_strength():.2f}")
+        self.stdout.write(f"Training sample fraction: {_training_sample_fraction():.2f}")
         self.stdout.write(f"Connecting to Flower server: {server_address}")
 
         client = create_client(
@@ -243,6 +281,7 @@ class Command(BaseCommand):
             test_split=test_split,
             batch_size=batch_size,
             sampling_strength=_sampling_strength(),
+            training_sample_fraction=_training_sample_fraction(),
         )
 
         fl.client.start_client(server_address=server_address, client=client.to_client())

@@ -6,6 +6,7 @@ Orchestrates model training across distributed clients (patient devices/clinics)
 import logging
 import os
 import io
+import json
 from time import perf_counter
 from datetime import datetime
 from typing import Dict, Optional, Tuple, List
@@ -159,6 +160,7 @@ class FederatedStrategy(FedAvg):
         # Persist aggregated model to MinIO if available
         if self.minio_client and aggregated_params:
             self._save_checkpoint(server_round, aggregated_params)
+            self._publish_model_update_notice(model_name, server_round)
 
         record_flower_round(
             model=model_name,
@@ -169,6 +171,30 @@ class FederatedStrategy(FedAvg):
         )
         
         return aggregated_params, aggregated_metrics
+
+    def _publish_model_update_notice(self, model_name: str, round_num: int) -> None:
+        """Persist a small notice so clinic admins know a newer model is available."""
+        try:
+            if not self.minio_client.bucket_exists(self.bucket_name):
+                self.minio_client.make_bucket(self.bucket_name)
+
+            payload = {
+                "model": model_name,
+                "updated_at": datetime.utcnow().isoformat() + "Z",
+                "latest_object": f"models/{model_name}/latest.pt",
+            }
+            notice_object = f"control/model-updates/{model_name}.json"
+            notice_bytes = json.dumps(payload, sort_keys=True).encode("utf-8")
+            self.minio_client.put_object(
+                bucket_name=self.bucket_name,
+                object_name=notice_object,
+                data=io.BytesIO(notice_bytes),
+                length=len(notice_bytes),
+                content_type="application/json",
+            )
+            logger.info("Round %s: published update notice for %s", round_num, model_name)
+        except Exception as exc:
+            logger.warning("Round %s: failed to publish update notice for %s: %s", round_num, model_name, exc)
 
     def _infer_model_name(self, ndarrays: List) -> str:
         """Infer the model family from the aggregated parameter shapes."""

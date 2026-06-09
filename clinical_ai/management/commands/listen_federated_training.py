@@ -68,7 +68,7 @@ class Command(BaseCommand):
                 min_samples = int(payload.get("min_samples", 1))
                 test_split = float(payload.get("test_split", 0.2))
                 batch_size = int(payload.get("batch_size", 32))
-                sync_latest_model = bool(payload.get("sync_latest_model", True))
+                sync_latest_model = bool(payload.get("sync_latest_model", False))
                 model_gap_seconds = max(0, int(payload.get("model_gap_seconds", 0)))
 
                 self.stdout.write(

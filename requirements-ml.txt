@@ -6,7 +6,6 @@ torchvision==0.22.0
 
 # Federated Learning
 flwr==1.7.0
-minio==7.2.7
 
 # Data Science
 numpy==1.26.4

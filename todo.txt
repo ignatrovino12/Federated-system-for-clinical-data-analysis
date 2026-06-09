@@ -1,13 +1,10 @@
 - collect and show statistics (why the solution is good)
-- make training model better ( maybe the base model as well )
-- delete from frontend the history logs 
 
-- sometimes model saves sometimes not
-- make sure model takes into account how much each patient was used
+- delete from frontend the history logs
+- frontend change name of models to be more sugestive
 
 - each client works only one network
-
--+ TLS - needs changes when in production  + k3s
+- TLS - needs changes when in production  + k3s
 
 
 Optional:
@@ -16,6 +13,7 @@ Optional:
 - weights - reverse attack - to make for a better security
 
 TODO THesis:
+- change C2 diagrams font ( make it bigger ) - grpc not rpc, not nginx
 - change things regarding ai ( after calibratio changes )
 write about kubernetes/cloudflare after site is deployed + deployment diagram
 bibliography -add django, django guardian docs etc

@@ -12,8 +12,10 @@ from sklearn.model_selection import StratifiedShuffleSplit
 
 from clinical_ai import services
 from clinical_ai.calibration import (
+    fit_bias_only_post_calibration,
     apply_calibration_state,
     fit_platt_calibration,
+    fit_temperature_bias_calibration,
     fit_temperature_calibration,
     save_calibration_state,
 )
@@ -37,9 +39,15 @@ class Command(BaseCommand):
         parser.add_argument("--seed", type=int, default=42)
         parser.add_argument(
             "--method",
-            choices=["temperature", "platt"],
-            default="temperature",
-            help="Calibration method to fit. Temperature is usually safer on small sets.",
+            choices=["temperature_bias", "temperature", "platt"],
+            default="temperature_bias",
+            help="Calibration method to fit. temperature_bias is usually the safest default.",
+        )
+        parser.add_argument(
+            "--target-recall",
+            type=float,
+            default=0.95,
+            help="Recall target used when selecting the safety threshold.",
         )
         parser.add_argument("--output", type=str, default=None)
 
@@ -48,6 +56,7 @@ class Command(BaseCommand):
         calibration_size = float(options["calibration_size"])
         seed = int(options["seed"])
         method = options["method"]
+        target_recall = float(options["target_recall"])
         output_path = options["output"]
 
         if not (0.05 <= calibration_size <= 0.5):
@@ -129,6 +138,24 @@ class Command(BaseCommand):
                 source_model=model_name,
                 calibration_size=calibration_size,
             )
+        elif method == "temperature_bias":
+            calibration_state = fit_temperature_bias_calibration(
+                y_calibration,
+                outputs,
+                source_model=model_name,
+                calibration_size=calibration_size,
+                target_recall=target_recall,
+            )
+            calibration_state = fit_bias_only_post_calibration(
+                y_calibration,
+                outputs,
+                base_state=calibration_state,
+                source_model=model_name,
+                calibration_size=calibration_size,
+                intercept_bounds=(-0.05, 0.05),
+                intercept_steps=201,
+                bias_penalty=0.03,
+            )
         else:
             calibration_state = fit_platt_calibration(
                 y_calibration,
@@ -154,4 +181,5 @@ class Command(BaseCommand):
         self.stdout.write(f"Calibration samples: {len(y_calibration)}")
         self.stdout.write(f"Raw Brier: {before_brier:.6f}")
         self.stdout.write(f"Calibrated Brier: {after_brier:.6f}")
+        self.stdout.write(f"Safety threshold: {calibration_state.decision_threshold:.6f}")
         self.stdout.write(f"Output: {destination}")

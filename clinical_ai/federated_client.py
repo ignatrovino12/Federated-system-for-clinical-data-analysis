@@ -178,6 +178,7 @@ class FederatedClient(fl.client.NumPyClient):
         test_loader: DataLoader,
         model_name: str,
         sampling_strength: float = 1.0,
+        training_sample_fraction: float = 0.5,
         training_record_ids: Optional[Sequence[int]] = None,
     ):
         self.model = model
@@ -185,7 +186,8 @@ class FederatedClient(fl.client.NumPyClient):
         self.test_loader = test_loader
         self.batch_size = int(train_loader.batch_size or 32)
         self.model_name = model_name
-        self.sampling_strength = max(0.0, min(2.0, float(sampling_strength)))
+        self.sampling_strength = max(0.0, min(4.0, float(sampling_strength)))
+        self.training_sample_fraction = max(0.1, min(1.0, float(training_sample_fraction)))
         self.clinic_id = os.getenv("CLINIC_ID", os.getenv("HOSTNAME", "clinic"))
         self.training_record_ids = list(training_record_ids or [])
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -196,10 +198,11 @@ class FederatedClient(fl.client.NumPyClient):
     def _rebuild_weighted_train_loader(self, sample_weights: np.ndarray) -> None:
         # Prefer low-round samples by sampling inversely to federated_train_count-derived weights.
         sampler_weights = torch.from_numpy(np.clip(sample_weights, 1e-6, None).astype(np.float64))
+        num_samples = max(1, int(round(len(sample_weights) * self.training_sample_fraction)))
         sampler = WeightedRandomSampler(
             weights=sampler_weights,
-            num_samples=len(sample_weights),
-            replacement=True,
+            num_samples=num_samples,
+            replacement=False,
         )
         self.train_loader = DataLoader(
             self.train_loader.dataset,
@@ -229,13 +232,44 @@ class FederatedClient(fl.client.NumPyClient):
                 )
             }
 
-            refreshed_weights = np.asarray(
-                [
-                    1.0 / ((1.0 + float(id_to_count.get(record_id, 0))) ** self.sampling_strength)
-                    for record_id in self.training_record_ids
-                ],
-                dtype=np.float32,
-            )
+            # Compute rank-based weights so the lowest federated_train_count records
+            # receive higher sampling probability, but compress the dynamic range
+            # to avoid a tiny set of records dominating selection forever.
+            counts = np.asarray([float(id_to_count.get(rid, 0)) for rid in self.training_record_ids], dtype=np.float32)
+            order = np.argsort(counts)  # indices of records sorted by count (ascending)
+            ranks = np.empty_like(order)
+            ranks[order] = np.arange(len(counts), 0, -1)  # larger number => preferred
+
+            # Normalize ranks to [0,1] then scale into [min_val, 1.0] to avoid zeros.
+            min_val = 1e-3
+            if ranks.max() - ranks.min() > 0:
+                norm = (ranks - ranks.min()) / (ranks.max() - ranks.min())
+            else:
+                norm = np.ones_like(ranks, dtype=np.float32)
+            base = min_val + (1.0 - min_val) * norm  # in [min_val, 1.0]
+
+            # Apply a modest exponent to increase preference; scale exponent so
+            # it doesn't explode for large `sampling_strength` values.
+            power = 1.0 + float(self.sampling_strength) * 0.5
+            refreshed_weights = (base ** power).astype(np.float32)
+
+            # Debug logging: counts summary and a few top weights to diagnose issues.
+            try:
+                unique_counts = np.unique(counts)
+                top_idx = np.argsort(-refreshed_weights)[:5]
+                top_examples = [
+                    (int(self.training_record_ids[i]), float(counts[i]), float(refreshed_weights[i]))
+                    for i in top_idx
+                ]
+                logger.info(
+                    "Sampling weights summary: counts_min=%s, counts_max=%s, unique_counts=%s, top=%s",
+                    float(counts.min()),
+                    float(counts.max()),
+                    unique_counts[:10].tolist(),
+                    top_examples,
+                )
+            except Exception:
+                logger.exception("Failed to log sampling weight debug info")
 
             dataset_tensors = list(self.train_loader.dataset.tensors)
             dataset_tensors[2] = torch.from_numpy(refreshed_weights).float()
@@ -325,6 +359,7 @@ def create_client(
     test_split: float = 0.2,
     batch_size: int = 32,
     sampling_strength: float = 1.0,
+    training_sample_fraction: float = 0.5,
 ) -> FederatedClient:
     if model_type.lower() == "alex5050":
         model = DiabetesNet(input_size=21)
@@ -383,10 +418,11 @@ def create_client(
 
     # Use each training sample once per epoch and downweight patients that have already been trained many times.
     train_sampler_weights = np.clip(train_weights, 1e-6, None).astype(np.float64)
+    num_samples = max(1, int(round(len(train_sampler_weights) * max(0.1, min(1.0, float(training_sample_fraction))))))
     train_sampler = WeightedRandomSampler(
         weights=torch.from_numpy(train_sampler_weights),
-        num_samples=len(train_sampler_weights),
-        replacement=True,
+        num_samples=num_samples,
+        replacement=False,
     )
     train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_sampler)
     test_loader = DataLoader(test_dataset, batch_size=batch_size)
@@ -397,5 +433,6 @@ def create_client(
         test_loader,
         model_name=model_type.lower(),
         sampling_strength=sampling_strength,
+        training_sample_fraction=training_sample_fraction,
         training_record_ids=train_record_ids,
     )
