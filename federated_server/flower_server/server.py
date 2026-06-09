@@ -111,8 +111,10 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 def _fit_config(server_round: int) -> Dict[str, float]:
     """Ask clients to do a little more local work so the update can move off the prior."""
     if server_round <= 2:
-        return {"local_epochs": 5, "learning_rate": 0.005}
-    return {"local_epochs": 3, "learning_rate": 0.003}
+        return {"local_epochs": 3, "learning_rate": 0.0025, "label_smoothing": 0.05}
+    if server_round <= 4:
+        return {"local_epochs": 2, "learning_rate": 0.0015, "label_smoothing": 0.03}
+    return {"local_epochs": 1, "learning_rate": 0.001, "label_smoothing": 0.02}
 
 
 class FederatedStrategy(FedAvg):
@@ -194,10 +196,6 @@ class FederatedStrategy(FedAvg):
                 logger.warning(f"Round {round_num}: No parameters to save")
                 return
 
-            # If configured to save only at the final round, skip intermediate rounds
-            if self.final_round is not None and round_num != self.final_round:
-                return
-
             model_name = self._infer_model_name(ndarrays)
             inferred_model = self._build_model(model_name)
             state_dict = inferred_model.state_dict()
@@ -258,8 +256,8 @@ def create_minio_client() -> Optional[Minio]:
     """Create MinIO client from environment variables."""
     try:
         endpoint = os.getenv("MINIO_ENDPOINT", "localhost:9000")
-        access_key = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
-        secret_key = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+        access_key = os.getenv("MINIO_ACCESS_KEY")
+        secret_key = os.getenv("MINIO_SECRET_KEY")
         use_ssl = os.getenv("MINIO_USE_SSL", "false").lower() == "true"
         
         client = Minio(

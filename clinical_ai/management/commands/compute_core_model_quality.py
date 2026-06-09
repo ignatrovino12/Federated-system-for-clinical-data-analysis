@@ -20,9 +20,11 @@ from sklearn.metrics import (
     roc_auc_score,
     roc_curve,
 )
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedShuffleSplit
 
 from clinical_ai import services
+from clinical_ai.calibration import apply_calibration_state
 from clinical_ai.models import PatientClinicalRecord
 
 
@@ -73,16 +75,23 @@ def _bootstrap_ci(
 
 def _calibration_slope_intercept(y_true: np.ndarray, y_prob: np.ndarray) -> Tuple[Optional[float], Optional[float]]:
     clipped = np.clip(y_prob, 1e-6, 1 - 1e-6)
-    logits = np.log(clipped / (1.0 - clipped))
-    design_matrix = np.column_stack([np.ones_like(logits), logits])
+    logits = np.log(clipped / (1.0 - clipped)).reshape(-1, 1)
+
+    if len(np.unique(y_true)) < 2:
+        return None, None
 
     try:
-        coef, _, _, _ = np.linalg.lstsq(design_matrix, y_true.astype(float), rcond=None)
+        recalibration_model = LogisticRegression(
+            solver="lbfgs",
+            penalty=None,
+            max_iter=2000,
+        )
+        recalibration_model.fit(logits, y_true.astype(int))
     except Exception:
         return None, None
 
-    intercept = float(coef[0])
-    slope = float(coef[1])
+    slope = float(recalibration_model.coef_.ravel()[0])
+    intercept = float(recalibration_model.intercept_.ravel()[0])
     return slope, intercept
 
 
@@ -156,6 +165,86 @@ def _best_youden_threshold(y_true: np.ndarray, y_prob: np.ndarray) -> float:
     if not np.isfinite(value):
         return 0.5
     return min(max(value, 0.0), 1.0)
+
+
+def _build_quality_block(
+    *,
+    y_true: np.ndarray,
+    probabilities: np.ndarray,
+    threshold_default: float,
+    threshold_override: Optional[float],
+    bootstrap_samples: int,
+    seed: int,
+) -> Dict[str, object]:
+    threshold_primary = float(threshold_override) if threshold_override is not None else threshold_default
+    threshold_f1 = _best_f1_threshold(y_true, probabilities)
+    threshold_youden = _best_youden_threshold(y_true, probabilities)
+
+    roc_auc_value = float(roc_auc_score(y_true, probabilities)) if len(np.unique(y_true)) > 1 else None
+    pr_auc_value = float(average_precision_score(y_true, probabilities))
+    brier_value = float(brier_score_loss(y_true, probabilities))
+    calibration_slope, calibration_intercept = _calibration_slope_intercept(y_true, probabilities)
+    ece_value = _expected_calibration_error(y_true, probabilities, n_bins=10)
+
+    roc_auc_boot = _bootstrap_ci(
+        y_true=y_true,
+        y_score=probabilities,
+        metric_func=roc_auc_score,
+        n_bootstrap=bootstrap_samples,
+        seed=seed,
+        requires_both_classes=True,
+    )
+    pr_auc_boot = _bootstrap_ci(
+        y_true=y_true,
+        y_score=probabilities,
+        metric_func=average_precision_score,
+        n_bootstrap=bootstrap_samples,
+        seed=seed + 1,
+        requires_both_classes=False,
+    )
+    brier_boot = _bootstrap_ci(
+        y_true=y_true,
+        y_score=probabilities,
+        metric_func=brier_score_loss,
+        n_bootstrap=bootstrap_samples,
+        seed=seed + 2,
+        requires_both_classes=False,
+    )
+
+    frac_pos, mean_pred = calibration_curve(y_true, probabilities, n_bins=10, strategy="quantile")
+
+    return {
+        "roc_auc": _safe_float(roc_auc_value),
+        "roc_auc_ci95": {
+            "mean_bootstrap": _safe_float(roc_auc_boot[0]),
+            "lower": _safe_float(roc_auc_boot[1]),
+            "upper": _safe_float(roc_auc_boot[2]),
+        },
+        "pr_auc": _safe_float(pr_auc_value),
+        "pr_auc_ci95": {
+            "mean_bootstrap": _safe_float(pr_auc_boot[0]),
+            "lower": _safe_float(pr_auc_boot[1]),
+            "upper": _safe_float(pr_auc_boot[2]),
+        },
+        "brier_score": _safe_float(brier_value),
+        "brier_score_ci95": {
+            "mean_bootstrap": _safe_float(brier_boot[0]),
+            "lower": _safe_float(brier_boot[1]),
+            "upper": _safe_float(brier_boot[2]),
+        },
+        "calibration_slope": _safe_float(calibration_slope),
+        "calibration_intercept": _safe_float(calibration_intercept),
+        "expected_calibration_error": _safe_float(ece_value),
+        "threshold_metrics": {
+            "default_or_override": _threshold_metrics(y_true, probabilities, threshold_primary),
+            "best_f1": _threshold_metrics(y_true, probabilities, threshold_f1),
+            "best_youden_j": _threshold_metrics(y_true, probabilities, threshold_youden),
+        },
+        "calibration_curve": {
+            "mean_predicted_probability": [float(value) for value in mean_pred.tolist()],
+            "fraction_of_positives": [float(value) for value in frac_pos.tolist()],
+        },
+    }
 
 
 class Command(BaseCommand):
@@ -255,52 +344,41 @@ class Command(BaseCommand):
         model = artifacts["model"]
         device = artifacts["device"]
         outputs_probability = bool(artifacts.get("outputs_probability", False))
+        calibration_state = artifacts.get("calibration")
 
         with torch.no_grad():
             tensor_x = torch.tensor(x_test_scaled, dtype=torch.float32).to(device)
             outputs = model(tensor_x)
-            if outputs_probability:
-                probabilities = outputs.detach().cpu().numpy().ravel().astype(np.float64)
-            else:
-                probabilities = torch.sigmoid(outputs).detach().cpu().numpy().ravel().astype(np.float64)
+            raw_outputs = outputs.detach().cpu().numpy().ravel().astype(np.float64)
+
+        probabilities = apply_calibration_state(
+            raw_outputs,
+            outputs_probability=outputs_probability,
+            calibration_state=None,
+        )
+        calibrated_probabilities = apply_calibration_state(
+            raw_outputs,
+            outputs_probability=outputs_probability,
+            calibration_state=calibration_state,
+        )
 
         threshold_default = float(artifacts["threshold"])
-        threshold_primary = float(threshold_override) if threshold_override is not None else threshold_default
-        threshold_f1 = _best_f1_threshold(y_test, probabilities)
-        threshold_youden = _best_youden_threshold(y_test, probabilities)
-
-        roc_auc_value = float(roc_auc_score(y_test, probabilities)) if len(np.unique(y_test)) > 1 else None
-        pr_auc_value = float(average_precision_score(y_test, probabilities))
-        brier_value = float(brier_score_loss(y_test, probabilities))
-        calibration_slope, calibration_intercept = _calibration_slope_intercept(y_test, probabilities)
-        ece_value = _expected_calibration_error(y_test, probabilities, n_bins=10)
-
-        roc_auc_boot = _bootstrap_ci(
+        raw_quality = _build_quality_block(
             y_true=y_test,
-            y_score=probabilities,
-            metric_func=roc_auc_score,
-            n_bootstrap=bootstrap_samples,
+            probabilities=probabilities,
+            threshold_default=threshold_default,
+            threshold_override=threshold_override,
+            bootstrap_samples=bootstrap_samples,
             seed=seed,
-            requires_both_classes=True,
         )
-        pr_auc_boot = _bootstrap_ci(
+        calibrated_quality = _build_quality_block(
             y_true=y_test,
-            y_score=probabilities,
-            metric_func=average_precision_score,
-            n_bootstrap=bootstrap_samples,
-            seed=seed + 1,
-            requires_both_classes=False,
+            probabilities=calibrated_probabilities,
+            threshold_default=threshold_default,
+            threshold_override=threshold_override,
+            bootstrap_samples=bootstrap_samples,
+            seed=seed + 100,
         )
-        brier_boot = _bootstrap_ci(
-            y_true=y_test,
-            y_score=probabilities,
-            metric_func=brier_score_loss,
-            n_bootstrap=bootstrap_samples,
-            seed=seed + 2,
-            requires_both_classes=False,
-        )
-
-        frac_pos, mean_pred = calibration_curve(y_test, probabilities, n_bins=10, strategy="quantile")
 
         report = {
             "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -316,37 +394,13 @@ class Command(BaseCommand):
                 "test_size": float(test_size),
                 "seed": int(seed),
             },
-            "core_model_quality": {
-                "roc_auc": _safe_float(roc_auc_value),
-                "roc_auc_ci95": {
-                    "mean_bootstrap": _safe_float(roc_auc_boot[0]),
-                    "lower": _safe_float(roc_auc_boot[1]),
-                    "upper": _safe_float(roc_auc_boot[2]),
-                },
-                "pr_auc": _safe_float(pr_auc_value),
-                "pr_auc_ci95": {
-                    "mean_bootstrap": _safe_float(pr_auc_boot[0]),
-                    "lower": _safe_float(pr_auc_boot[1]),
-                    "upper": _safe_float(pr_auc_boot[2]),
-                },
-                "brier_score": _safe_float(brier_value),
-                "brier_score_ci95": {
-                    "mean_bootstrap": _safe_float(brier_boot[0]),
-                    "lower": _safe_float(brier_boot[1]),
-                    "upper": _safe_float(brier_boot[2]),
-                },
-                "calibration_slope": _safe_float(calibration_slope),
-                "calibration_intercept": _safe_float(calibration_intercept),
-                "expected_calibration_error": _safe_float(ece_value),
-                "threshold_metrics": {
-                    "default_or_override": _threshold_metrics(y_test, probabilities, threshold_primary),
-                    "best_f1": _threshold_metrics(y_test, probabilities, threshold_f1),
-                    "best_youden_j": _threshold_metrics(y_test, probabilities, threshold_youden),
-                },
-                "calibration_curve": {
-                    "mean_predicted_probability": [float(value) for value in mean_pred.tolist()],
-                    "fraction_of_positives": [float(value) for value in frac_pos.tolist()],
-                },
+            "core_model_quality": raw_quality,
+            "calibrated_core_model_quality": calibrated_quality,
+            "calibration": {
+                "applied": bool(calibration_state and calibration_state.method != "identity"),
+                "method": getattr(calibration_state, "method", "identity"),
+                "source_model": getattr(calibration_state, "source_model", model_name),
+                "calibration_size": getattr(calibration_state, "calibration_size", 0.0),
             },
             "evaluation_record_ids": [int(record_id) for record_id in ids_test.tolist()],
         }
@@ -365,7 +419,10 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("Core Model Quality report generated"))
         self.stdout.write(f"Model: {model_name}")
         self.stdout.write(f"Records (eval): {len(y_test)}")
-        self.stdout.write(f"ROC AUC: {report['core_model_quality']['roc_auc']}")
-        self.stdout.write(f"PR AUC: {report['core_model_quality']['pr_auc']}")
-        self.stdout.write(f"Brier score: {report['core_model_quality']['brier_score']}")
+        self.stdout.write(f"ROC AUC (raw): {report['core_model_quality']['roc_auc']}")
+        self.stdout.write(f"ROC AUC (calibrated): {report['calibrated_core_model_quality']['roc_auc']}")
+        self.stdout.write(f"PR AUC (raw): {report['core_model_quality']['pr_auc']}")
+        self.stdout.write(f"PR AUC (calibrated): {report['calibrated_core_model_quality']['pr_auc']}")
+        self.stdout.write(f"Brier score (raw): {report['core_model_quality']['brier_score']}")
+        self.stdout.write(f"Brier score (calibrated): {report['calibrated_core_model_quality']['brier_score']}")
         self.stdout.write(f"Output: {destination}")

@@ -1,0 +1,9 @@
+{
+  "method": "temperature",
+  "coef": 1.1111111111111112,
+  "intercept": 0.0,
+  "fitted_at": "2026-06-09T13:55:45.935924+00:00",
+  "n_samples": 740,
+  "source_model": "alex5050",
+  "calibration_size": 0.3
+}

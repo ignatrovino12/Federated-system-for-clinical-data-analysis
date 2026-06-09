@@ -21,18 +21,16 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
-
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-@ujc&q=@w*e6hz2l9^2&a#5!&7$*ikn9hhn6%x&un)0)l!bwj&"
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY must be set in the environment")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
 # Key for patient pseudonym HMAC. Set in environment for production.
-PATIENT_HMAC_KEY = os.getenv('PATIENT_HMAC_KEY', SECRET_KEY)
+PATIENT_HMAC_KEY = os.getenv("PATIENT_HMAC_KEY") or SECRET_KEY
 
 ALLOWED_HOSTS = [host.strip() for host in os.getenv(
     "ALLOWED_HOSTS",
@@ -96,7 +94,7 @@ DATABASES = {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": os.getenv("DB_NAME", "healthcheck_db"),
         "USER": os.getenv("DB_USER", "postgres"),
-        "PASSWORD": os.getenv("DB_PASSWORD", "postgres"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
         "HOST": os.getenv("DB_HOST", "localhost"),
         "PORT": os.getenv("DB_PORT", "5432"),
     }

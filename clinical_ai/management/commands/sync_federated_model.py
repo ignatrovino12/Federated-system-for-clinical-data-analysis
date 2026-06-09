@@ -25,12 +25,12 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             "--access-key",
-            default=os.getenv("MINIO_ACCESS_KEY", "minioadmin"),
+            default=os.getenv("MINIO_ACCESS_KEY"),
             help="MinIO access key.",
         )
         parser.add_argument(
             "--secret-key",
-            default=os.getenv("MINIO_SECRET_KEY", "minioadmin"),
+            default=os.getenv("MINIO_SECRET_KEY"),
             help="MinIO secret key.",
         )
         parser.add_argument(

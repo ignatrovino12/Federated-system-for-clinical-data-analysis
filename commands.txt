@@ -1,7 +1,3 @@
-start training
-docker exec healthcheck-web python manage.py run_flower_client --model alex5050 --server-address flower-server:8080 --min-samples 1
-docker exec healthcheck-web python manage.py run_flower_client --model mustafa --server-address flower-server:8080 --min-samples 1
-
 
 sync changes  
 docker exec healthcheck-web python manage.py sync_federated_model --model alex5050 --endpoint minio:9000 --access-key minioadmin --secret-key minioadmin
@@ -37,8 +33,26 @@ docker compose --env-file client2.env -f docker-compose.client.yml -p client2 up
 
 metrics report
 docker compose --env-file client1.env -f docker-compose.client.yml -p client1 exec -T web python manage.py compute_core_model_quality --model alex5050 --bootstrap-samples 1000 --test-size 0.2 --seed 42
+docker compose --env-file client1.env -f docker-compose.client.yml -p client1 exec -T web python manage.py compute_core_model_quality --model mustafa --bootstrap-samples 1000 --test-size 0.2 --seed 42
+
+docker compose --env-file client2.env -f docker-compose.client.yml -p client2 exec -T web python manage.py compute_core_model_quality --model alex5050 --bootstrap-samples 1000 --test-size 0.2 --seed 42
+docker compose --env-file client2.env -f docker-compose.client.yml -p client2 exec -T web python manage.py compute_core_model_quality --model mustafa --bootstrap-samples 1000 --test-size 0.2 --seed 42
 
 Access control rbac + django guardian
 python manage.py migrate
 python manage.py bootstrap_roles
+
+
+Test HMAC
+docker exec -it client1-web-1 python manage.py shell -c "from pubsub.models import Patient; p=Patient.objects.get(id=300); print(p.CNP, p.pseudonym)"
+
+Calibration
+docker exec -it client2-web-1 python manage.py fit_model_calibration --model alex5050
+docker exec -it client2-web-1 python manage.py fit_model_calibration --model mustafa
+
+docker exec -it client1-web-1 python manage.py fit_model_calibration --model alex5050 --method temperature
+docker exec -it client1-web-1 python manage.py fit_model_calibration --model mustafa --method temperature
+docker exec -it client2-web-1 python manage.py fit_model_calibration --model alex5050 --method temperature
+docker exec -it client2-web-1 python manage.py fit_model_calibration --model mustafa --method temperature
+
 

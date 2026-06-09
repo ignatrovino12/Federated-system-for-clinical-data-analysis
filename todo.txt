@@ -1,17 +1,25 @@
 - collect and show statistics (why the solution is good)
 - make training model better ( maybe the base model as well )
+- delete from frontend the history logs 
 
--+ test RBAC / make sure RBAC works in all cases  
--+ TLS - needs changes when in production
+- sometimes model saves sometimes not
+- make sure model takes into account how much each patient was used
+
+- each client works only one network
+
+-+ TLS - needs changes when in production  + k3s
+
 
 Optional:
 - make the ai check for critical cases and anounce the doctors
 - make the server ( which is single point of failure) safer (second server or other ways)
-- weights - reverse attack - to make security
+- weights - reverse attack - to make for a better security
 
 TODO THesis:
-write about kubernetes/cloudflare after site is deployed
-bibliographt -add django, django guardian docs etc
+- change things regarding ai ( after calibratio changes )
+write about kubernetes/cloudflare after site is deployed + deployment diagram
+bibliography -add django, django guardian docs etc
+
 
 
 DONE
@@ -22,8 +30,9 @@ notifications when appointments are assigned
 periodic deletion of appointments
 checking critical cases
 
+RBAC - access control
 TLS
-encrypted the mapping user - data with HMAC
+mapping user - data with HMAC
 
 
 Training

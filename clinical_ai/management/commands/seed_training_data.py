@@ -45,6 +45,37 @@ def _age_to_birthdate(age_years: int, rng: random.Random) -> date:
 	return today.replace(year=today.year - age_years) - timedelta(days=day_offset)
 
 
+def _sigmoid(value: float) -> float:
+	return 1.0 / (1.0 + pow(2.718281828459045, -value))
+
+
+def _sample_diabetes_status(rng: random.Random, risk_score: int) -> str:
+	"""Convert a risk score into a noisy label so synthetic data is not perfectly separable."""
+	# Add a little uncertainty so the same risk profile is not always labeled identically.
+	noisy_score = risk_score + rng.gauss(0.0, 1.35)
+
+	if noisy_score <= 2:
+		weights = [0.86, 0.10, 0.04]
+	elif noisy_score <= 4:
+		weights = [0.64, 0.22, 0.14]
+	elif noisy_score <= 6:
+		weights = [0.28, 0.42, 0.30]
+	elif noisy_score <= 8:
+		weights = [0.16, 0.28, 0.56]
+	else:
+		weights = [0.05, 0.12, 0.83]
+
+	return rng.choices(
+		[
+			PatientClinicalRecord.DiabetesStatus.HAS_NOT,
+			PatientClinicalRecord.DiabetesStatus.NOT_CONFIRMED,
+			PatientClinicalRecord.DiabetesStatus.HAS,
+		],
+		weights=weights,
+		k=1,
+	)[0]
+
+
 def _build_synthetic_profile(rng: random.Random):
 	"""Build one coherent synthetic clinical profile for both models."""
 	risk_band = rng.choices(["low", "moderate", "high"], weights=[0.45, 0.35, 0.20], k=1)[0]
@@ -236,11 +267,11 @@ def _build_synthetic_profile(rng: random.Random):
 		risk_score += 1
 
 	if risk_score >= 8:
-		diabetes_status = PatientClinicalRecord.DiabetesStatus.HAS
+		diabetes_status = _sample_diabetes_status(rng, risk_score)
 	elif risk_score <= 3:
-		diabetes_status = PatientClinicalRecord.DiabetesStatus.HAS_NOT
+		diabetes_status = _sample_diabetes_status(rng, risk_score)
 	else:
-		diabetes_status = PatientClinicalRecord.DiabetesStatus.NOT_CONFIRMED
+		diabetes_status = _sample_diabetes_status(rng, risk_score)
 
 	return {
 		"age_years": age_years,

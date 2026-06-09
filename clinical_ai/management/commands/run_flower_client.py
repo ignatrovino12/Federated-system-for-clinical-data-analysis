@@ -109,12 +109,12 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             "--minio-access-key",
-            default=os.getenv("MINIO_ACCESS_KEY", "minioadmin"),
+            default=os.getenv("MINIO_ACCESS_KEY"),
             help="MinIO access key used when syncing the latest model.",
         )
         parser.add_argument(
             "--minio-secret-key",
-            default=os.getenv("MINIO_SECRET_KEY", "minioadmin"),
+            default=os.getenv("MINIO_SECRET_KEY"),
             help="MinIO secret key used when syncing the latest model.",
         )
         parser.add_argument(

@@ -65,8 +65,8 @@ services:
       - FLOWER_SERVER_ADDRESS=${FLOWER_SERVER_ADDRESS:-flower-server:8080}
       - FLOWER_CONTROL_URL=${FLOWER_CONTROL_URL:-http://flower-server:8081}
       - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
       - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-models}
     networks:
@@ -99,8 +99,8 @@ services:
       - FLOWER_SERVER_ADDRESS=${FLOWER_SERVER_ADDRESS:-flower-server:8080}
       - FLOWER_CONTROL_URL=${FLOWER_CONTROL_URL:-http://flower-server:8081}
       - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
       - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-models}
     networks:
@@ -133,8 +133,8 @@ services:
       - FLOWER_SERVER_ADDRESS=${FLOWER_SERVER_ADDRESS:-flower-server:8080}
       - FLOWER_CONTROL_URL=${FLOWER_CONTROL_URL:-http://flower-server:8081}
       - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
       - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-models}
     networks:
@@ -166,8 +166,8 @@ services:
       - FLOWER_MIN_SAMPLES=${FLOWER_MIN_SAMPLES:-1}
       - FLOWER_CONTROL_URL=${FLOWER_CONTROL_URL:-http://flower-server:8081}
       - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
       - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-models}
     networks:
@@ -202,8 +202,8 @@ services:
       - FLOWER_SERVER_ADDRESS=${FLOWER_SERVER_ADDRESS:-flower-server:8080}
       - FLOWER_CONTROL_URL=${FLOWER_CONTROL_URL:-http://flower-server:8081}
       - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
       - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-models}
     networks:

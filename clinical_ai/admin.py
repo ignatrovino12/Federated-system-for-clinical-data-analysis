@@ -71,8 +71,8 @@ class PatientClinicalRecordAdmin(admin.ModelAdmin):
 				"sync_federated_model",
 				model=model,
 				endpoint=os.getenv("MINIO_ENDPOINT", "minio:9000"),
-				access_key=os.getenv("MINIO_ACCESS_KEY", "minioadmin"),
-				secret_key=os.getenv("MINIO_SECRET_KEY", "minioadmin"),
+				access_key=os.getenv("MINIO_ACCESS_KEY"),
+				secret_key=os.getenv("MINIO_SECRET_KEY"),
 			),
 		)
 		return HttpResponseRedirect(self._changelist_url())

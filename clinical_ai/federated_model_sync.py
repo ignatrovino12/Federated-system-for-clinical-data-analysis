@@ -25,8 +25,8 @@ def create_minio_client(
 ) -> object:
 
     endpoint = endpoint or os.getenv("MINIO_ENDPOINT", "localhost:9000")
-    access_key = access_key or os.getenv("MINIO_ACCESS_KEY", "minioadmin")
-    secret_key = secret_key or os.getenv("MINIO_SECRET_KEY", "minioadmin")
+    access_key = access_key or os.getenv("MINIO_ACCESS_KEY")
+    secret_key = secret_key or os.getenv("MINIO_SECRET_KEY")
     if use_ssl is None:
         use_ssl = os.getenv("MINIO_USE_SSL", "false").lower() == "true"
 

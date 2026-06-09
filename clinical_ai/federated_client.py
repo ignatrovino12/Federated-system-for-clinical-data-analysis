@@ -85,6 +85,7 @@ def train(
     epochs: int = 1,
     lr: float = 0.001,
     device: str = "cpu",
+    label_smoothing: float = 0.0,
 ) -> Tuple[float, List[int]]:
     model.to(device)
     model.train()
@@ -103,6 +104,7 @@ def train(
     total_loss = 0.0
     num_batches = 0
     used_record_ids = set()
+    smoothing = max(0.0, min(0.2, float(label_smoothing)))
 
     for epoch in range(epochs):
         for batch in train_loader:
@@ -117,6 +119,9 @@ def train(
 
             batch_x = batch_x.to(device)
             batch_y = batch_y.to(device).unsqueeze(1)
+            if smoothing > 0:
+                # Soft labels reduce the incentive for the model to push logits to the extremes.
+                batch_y = batch_y * (1.0 - smoothing) + 0.5 * smoothing
 
             optimizer.zero_grad()
             output = model(batch_x)
@@ -253,9 +258,18 @@ class FederatedClient(fl.client.NumPyClient):
             epochs=int(config.get("local_epochs", 1)),
             lr=float(config.get("learning_rate", 0.001)),
             device=self.device,
+            label_smoothing=float(config.get("label_smoothing", 0.0)),
         )
         updated_weights = get_weights(self.model)
         duration_seconds = perf_counter() - started_at
+        if len(self.train_loader.dataset) > 0:
+            try:
+                sample_weights = self.train_loader.dataset.tensors[2].detach().cpu().numpy()
+                effective_examples = max(1, int(round(float(np.sum(sample_weights)))))
+            except Exception:
+                effective_examples = len(self.train_loader.dataset)
+        else:
+            effective_examples = 0
         if self.training_record_ids:
             try:
                 from django.db.models import F
@@ -269,16 +283,19 @@ class FederatedClient(fl.client.NumPyClient):
                 logger.info("Updated federated counters for %s sampled records", updated_rows)
             except Exception:
                 logger.exception("Failed to update federated training counters")
-        num_examples = len(self.train_loader.dataset)
         record_client_fit(
             clinic=self.clinic_id,
             model=self.model_name,
             duration_seconds=duration_seconds,
-            num_examples=num_examples,
+            num_examples=effective_examples,
             loss=loss,
             parameter_bytes_sent=self._parameter_bytes(updated_weights),
         )
-        return updated_weights, num_examples, {"loss": loss, "fit_duration_seconds": duration_seconds}
+        return updated_weights, effective_examples, {
+            "loss": loss,
+            "fit_duration_seconds": duration_seconds,
+            "effective_examples": effective_examples,
+        }
 
     def evaluate(self, parameters: List[np.ndarray], config: Dict) -> Tuple[float, int, Dict]:
         logger.info("Client evaluate() called")
