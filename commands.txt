@@ -18,19 +18,26 @@ docker exec healthcheck-web python manage.py makemessages -l ro
 docker exec healthcheck-web python manage.py compilemessages
 
 docker exec healthcheck-web bash -lc "msgfmt -o /app/locale/ro/LC_MESSAGES/django.mo /app/locale/ro/LC_MESSAGES/django.po"
+docker exec healthcheck-web bash -lc "apt-get update && apt-get install -y gettext && rm -rf /var/lib/apt/lists/*"
 docker restart healthcheck-web
 
 
 multiple clients for testing
 docker compose --env-file client1.env -f docker-compose.client.yml -p client1 up -d
 docker compose --env-file client2.env -f docker-compose.client.yml -p client2 up -d
+ docker compose -p flower up -d   
 
 metrics report
+
+core model
 docker compose --env-file client1.env -f docker-compose.client.yml -p client1 exec -T web python manage.py compute_core_model_quality --model alex5050 --bootstrap-samples 1000 --test-size 0.2 --seed 42
 docker compose --env-file client1.env -f docker-compose.client.yml -p client1 exec -T web python manage.py compute_core_model_quality --model mustafa --bootstrap-samples 1000 --test-size 0.2 --seed 42
 
 docker compose --env-file client2.env -f docker-compose.client.yml -p client2 exec -T web python manage.py compute_core_model_quality --model alex5050 --bootstrap-samples 1000 --test-size 0.2 --seed 42
 docker compose --env-file client2.env -f docker-compose.client.yml -p client2 exec -T web python manage.py compute_core_model_quality --model mustafa --bootstrap-samples 1000 --test-size 0.2 --seed 42
+
+clinical utility
+docker compose --env-file client1.env -f docker-compose.client.yml -p client1 exec -T web python manage.py compute_decision_curve_from_reports --report mustafa.json --out-dir reports/figures --bootstrap 1000 --seed 42
 
 Access control rbac + django guardian
 python manage.py migrate

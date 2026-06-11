@@ -152,7 +152,7 @@ class Command(BaseCommand):
                 base_state=calibration_state,
                 source_model=model_name,
                 calibration_size=calibration_size,
-                intercept_bounds=(-0.05, 0.05),
+                intercept_bounds=(-0.5, 0.5),
                 intercept_steps=201,
                 bias_penalty=0.03,
             )

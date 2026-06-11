@@ -4,7 +4,7 @@
 {% block title %}{% blocktrans %}Patient Details - {{ patient.get_full_name }}{% endblocktrans %}{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto">
+<div class="max-w-4xl mx-auto">
     <!-- Back Button -->
     <div class="mb-4">
         <a href="{% url 'pubsub:patient_list' %}" 
@@ -12,219 +12,177 @@
             ← {% trans "Back to Patient List" %}
         </a>
     </div>
-    
-    <!-- Alert: Viewing Private Data -->
-    <div class="mb-6 p-4 {% if show_full_data %}bg-red-50 border-2 border-red-300{% else %}bg-yellow-50 border-2 border-yellow-300{% endif %} rounded-lg">
-        <div class="flex items-center">
-            <span class="text-2xl mr-3">{% if show_full_data %}⚠️{% else %}🔒{% endif %}</span>
+    <div class="bg-white rounded-2xl shadow-xl p-8">
+        <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-6 mb-6">
             <div>
-                {% if show_full_data %}
-                <p class="text-red-800 font-semibold">{% trans "Viewing Full Medical Data" %}</p>
-                <p class="text-sm text-red-700">{% trans "This access has been logged. Handle patient information responsibly and in compliance with GDPR regulations." %}</p>
-                {% else %}
-                <p class="text-yellow-800 font-semibold">{% trans "Viewing Masked Patient Data" %}</p>
-                <p class="text-sm text-yellow-700">{% trans "Sensitive information is masked for privacy. Only doctors and admins can view full details. This access has been logged." %}</p>
+                <h2 class="text-3xl font-bold text-primary mb-2">{% trans "Patient Details" %}</h2>
+                <p class="text-gray-600">{% trans "Full medical record information" %}</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                {% if can_edit %}
+                <a href="{% url 'pubsub:patient_edit' patient.id %}" 
+                   class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                    ✏️ {% trans "Edit" %}
+                </a>
+                <a href="{% url 'clinical_ai:patient_medical_data' patient.id %}"
+                   class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                    🩺 {% trans "Medical Data" %}
+                </a>
                 {% endif %}
+                {% if can_delete %}
+                <a href="{% url 'pubsub:patient_delete' patient.id %}" 
+                   class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                    🗑️ {% trans "Delete" %}
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="mb-6 p-4 {% if show_full_data %}bg-red-50 border-2 border-red-300{% else %}bg-yellow-50 border-2 border-yellow-300{% endif %} rounded-lg">
+            <div class="flex items-center">
+                <span class="text-2xl mr-3">{% if show_full_data %}⚠️{% else %}🔒{% endif %}</span>
+                <div>
+                    {% if show_full_data %}
+                    <p class="text-red-800 font-semibold">{% trans "Viewing Full Medical Data" %}</p>
+                    <p class="text-sm text-red-700">{% trans "This access has been logged. Handle patient information responsibly and in compliance with GDPR regulations." %}</p>
+                    {% else %}
+                    <p class="text-yellow-800 font-semibold">{% trans "Viewing Masked Patient Data" %}</p>
+                    <p class="text-sm text-yellow-700">{% trans "Sensitive information is masked for privacy. Only doctors and admins can view full details. This access has been logged." %}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-6 pb-6 border-b-2 border-gray-200">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">📋 {% trans "Personal Information" %}</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <p class="text-sm text-gray-500">{% trans "First Name" %}</p>
+                    <p class="text-lg font-medium text-gray-900">{{ patient.prenume }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">{% trans "Last Name" %}</p>
+                    <p class="text-lg font-medium text-gray-900">{{ patient.nume }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">{% trans "Date of Birth / Age" %}</p>
+                    <p class="text-lg font-medium text-gray-900">
+                        {% if show_full_data %}
+                            {{ patient.data_nasterii|date:"d M Y" }} ({{ patient.get_age }} years)
+                        {% else %}
+                            {{ patient.get_age }} {% trans "years old" %}
+                        {% endif %}
+                    </p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">{% trans "Nationality" %}</p>
+                    <p class="text-lg font-medium text-gray-900">{{ patient.nationalitate }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-6 pb-6 border-b-2 border-gray-200">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">📄 {% trans "Identity Document" %}</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="md:col-span-3">
+                    <p class="text-sm text-gray-500">{% trans "CNP (Cod Numeric Personal)" %}</p>
+                    <p class="text-lg font-medium text-gray-900 font-mono">
+                        {% if show_full_data %}
+                            {{ patient.CNP }}
+                        {% else %}
+                            <span class="text-yellow-700">{{ patient.get_masked_cnp }}</span>
+                            <span class="text-xs text-gray-500 ml-2">({% trans "masked for privacy" %})</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">{% trans "ID Card Series" %}</p>
+                    <p class="text-lg font-medium text-gray-900 font-mono">
+                        {% if show_full_data %}
+                            {{ patient.serie_ci }}
+                        {% else %}
+                            <span class="text-yellow-700">{{ patient.serie_ci }}</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">{% trans "ID Card Number" %}</p>
+                    <p class="text-lg font-medium text-gray-900 font-mono">
+                        {% if show_full_data %}
+                            {{ patient.numar_ci }}
+                        {% else %}
+                            <span class="text-yellow-700">******</span>
+                            <span class="text-xs text-gray-500 ml-2">({% trans "masked" %})</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">{% trans "Full ID" %}</p>
+                    <p class="text-lg font-medium text-gray-900 font-mono">
+                        {% if show_full_data %}
+                            {{ patient.serie_ci }} {{ patient.numar_ci }}
+                        {% else %}
+                            {{ patient.get_masked_identity }}
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-6 pb-6 border-b-2 border-gray-200">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">📞 {% trans "Contact Information" %}</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <p class="text-sm text-gray-500">{% trans "Phone Number" %}</p>
+                    <p class="text-lg font-medium text-gray-900">
+                        {% if show_full_data %}
+                            {% if patient.telefon %}
+                                <a href="tel:{{ patient.telefon }}" class="text-primary hover:underline">{{ patient.telefon }}</a>
+                            {% else %}
+                                <span class="text-gray-400">{% trans "Not provided" %}</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-yellow-700">{{ patient.get_masked_phone }}</span>
+                            {% if patient.telefon %}
+                                <span class="text-xs text-gray-500 ml-2">({% trans "masked" %})</span>
+                            {% endif %}
+                        {% endif %}
+                    </p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">{% trans "Email Address" %}</p>
+                    <p class="text-lg font-medium text-gray-900">
+                        {% if show_full_data %}
+                            {% if patient.email %}
+                                <a href="mailto:{{ patient.email }}" class="text-primary hover:underline">{{ patient.email }}</a>
+                            {% else %}
+                                <span class="text-gray-400">{% trans "Not provided" %}</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-yellow-700">{{ patient.get_masked_email }}</span>
+                            {% if patient.email %}
+                                <span class="text-xs text-gray-500 ml-2">({% trans "masked" %})</span>
+                            {% endif %}
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">🏠 {% trans "Address" %}</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <p class="text-sm text-gray-500">{% trans "City" %}</p>
+                    <p class="text-lg font-medium text-gray-900">{{ patient.oras }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">{% trans "County" %}</p>
+                    <p class="text-lg font-medium text-gray-900">{{ patient.judet }}</p>
+                </div>
             </div>
         </div>
     </div>
-    
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Patient Information Card -->
-        <div class="lg:col-span-2">
-            <div class="bg-white rounded-2xl shadow-xl p-8">
-                <div class="flex justify-between items-start mb-6">
-                    <div>
-                        <h2 class="text-3xl font-bold text-primary mb-2">{% trans "Patient Details" %}</h2>
-                        <p class="text-gray-600">{% trans "Full medical record information" %}</p>
-                    </div>
-                    <div class="flex gap-2">
-                        {% if can_edit %}
-                        <a href="{% url 'pubsub:patient_edit' patient.id %}" 
-                           class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                            ✏️ {% trans "Edit" %}
-                        </a>
-                        <a href="{% url 'clinical_ai:patient_medical_data' patient.id %}"
-                           class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-                               🩺 {% trans "Medical Data" %}
-                        </a>
-                        {% endif %}
-                        {% if can_delete %}
-                        <a href="{% url 'pubsub:patient_delete' patient.id %}" 
-                           class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
-                            🗑️ {% trans "Delete" %}
-                        </a>
-                        {% endif %}
-                    </div>
-                </div>
-                
-                <!-- Personal Information -->
-                <div class="mb-6 pb-6 border-b-2 border-gray-200">
-                    <h3 class="text-xl font-semibold text-gray-800 mb-4">📋 {% trans "Personal Information" %}</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <p class="text-sm text-gray-500">{% trans "First Name" %}</p>
-                            <p class="text-lg font-medium text-gray-900">{{ patient.prenume }}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">{% trans "Last Name" %}</p>
-                            <p class="text-lg font-medium text-gray-900">{{ patient.nume }}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">{% trans "Date of Birth / Age" %}</p>
-                            <p class="text-lg font-medium text-gray-900">
-                                {% if show_full_data %}
-                                    {{ patient.data_nasterii|date:"d M Y" }} ({{ patient.get_age }} years)
-                                {% else %}
-                                    {{ patient.get_age }} {% trans "years old" %}
-                                {% endif %}
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">{% trans "Nationality" %}</p>
-                            <p class="text-lg font-medium text-gray-900">{{ patient.nationalitate }}</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Identity Document -->
-                <div class="mb-6 pb-6 border-b-2 border-gray-200">
-                    <h3 class="text-xl font-semibold text-gray-800 mb-4">📄 {% trans "Identity Document" %}</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="md:col-span-3">
-                            <p class="text-sm text-gray-500">{% trans "CNP (Cod Numeric Personal)" %}</p>
-                            <p class="text-lg font-medium text-gray-900 font-mono">
-                                {% if show_full_data %}
-                                    {{ patient.CNP }}
-                                {% else %}
-                                    <span class="text-yellow-700">{{ patient.get_masked_cnp }}</span>
-                                    <span class="text-xs text-gray-500 ml-2">({% trans "masked for privacy" %})</span>
-                                {% endif %}
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">{% trans "ID Card Series" %}</p>
-                            <p class="text-lg font-medium text-gray-900 font-mono">
-                                {% if show_full_data %}
-                                    {{ patient.serie_ci }}
-                                {% else %}
-                                    <span class="text-yellow-700">{{ patient.serie_ci }}</span>
-                                {% endif %}
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">{% trans "ID Card Number" %}</p>
-                            <p class="text-lg font-medium text-gray-900 font-mono">
-                                {% if show_full_data %}
-                                    {{ patient.numar_ci }}
-                                {% else %}
-                                    <span class="text-yellow-700">******</span>
-                                    <span class="text-xs text-gray-500 ml-2">({% trans "masked" %})</span>
-                                {% endif %}
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">{% trans "Full ID" %}</p>
-                            <p class="text-lg font-medium text-gray-900 font-mono">
-                                {% if show_full_data %}
-                                    {{ patient.serie_ci }} {{ patient.numar_ci }}
-                                {% else %}
-                                    {{ patient.get_masked_identity }}
-                                {% endif %}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Contact Information -->
-                <div class="mb-6 pb-6 border-b-2 border-gray-200">
-                    <h3 class="text-xl font-semibold text-gray-800 mb-4">📞 {% trans "Contact Information" %}</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <p class="text-sm text-gray-500">{% trans "Phone Number" %}</p>
-                            <p class="text-lg font-medium text-gray-900">
-                                {% if show_full_data %}
-                                    {% if patient.telefon %}
-                                        <a href="tel:{{ patient.telefon }}" class="text-primary hover:underline">{{ patient.telefon }}</a>
-                                    {% else %}
-                                        <span class="text-gray-400">{% trans "Not provided" %}</span>
-                                    {% endif %}
-                                {% else %}
-                                    <span class="text-yellow-700">{{ patient.get_masked_phone }}</span>
-                                    {% if patient.telefon %}
-                                        <span class="text-xs text-gray-500 ml-2">({% trans "masked" %})</span>
-                                    {% endif %}
-                                {% endif %}
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">{% trans "Email Address" %}</p>
-                            <p class="text-lg font-medium text-gray-900">
-                                {% if show_full_data %}
-                                    {% if patient.email %}
-                                        <a href="mailto:{{ patient.email }}" class="text-primary hover:underline">{{ patient.email }}</a>
-                                    {% else %}
-                                        <span class="text-gray-400">{% trans "Not provided" %}</span>
-                                    {% endif %}
-                                {% else %}
-                                    <span class="text-yellow-700">{{ patient.get_masked_email }}</span>
-                                    {% if patient.email %}
-                                        <span class="text-xs text-gray-500 ml-2">({% trans "masked" %})</span>
-                                    {% endif %}
-                                {% endif %}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Address -->
-                <div class="mb-6">
-                    <h3 class="text-xl font-semibold text-gray-800 mb-4">🏠 {% trans "Address" %}</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <p class="text-sm text-gray-500">{% trans "City" %}</p>
-                            <p class="text-lg font-medium text-gray-900">{{ patient.oras }}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">{% trans "County" %}</p>
-                            <p class="text-lg font-medium text-gray-900">{{ patient.judet }}</p>
-                        </div>
-                    </div>
-                </div>
-                
-            </div>
-        </div>
-        
-        <!-- Audit Log Sidebar -->
-        <div class="lg:col-span-1">
-            <div class="bg-white rounded-2xl shadow-xl p-6">
-                <h3 class="text-xl font-semibold text-gray-800 mb-4">📊 {% trans "Access Log" %}</h3>
-                <p class="text-sm text-gray-600 mb-4">{% trans "Recent access history for this patient" %}</p>
-                
-                {% if recent_logs %}
-                <div class="space-y-3">
-                    {% for log in recent_logs %}
-                    <div class="border-l-4 {% if log.action == 'view' %}border-blue-500{% elif log.action == 'edit' %}border-yellow-500{% elif log.action == 'delete' %}border-red-500{% else %}border-green-500{% endif %} pl-3 py-2">
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="font-medium text-gray-900">{{ log.user.username }}</span>
-                            <span class="text-xs px-2 py-1 rounded {% if log.action == 'view' %}bg-blue-100 text-blue-800{% elif log.action == 'edit' %}bg-yellow-100 text-yellow-800{% elif log.action == 'delete' %}bg-red-100 text-red-800{% else %}bg-green-100 text-green-800{% endif %}">
-                                {{ log.get_action_display }}
-                            </span>
-                        </div>
-                        <p class="text-xs text-gray-500">{{ log.timestamp|date:"d M Y H:i:s" }}</p>
-                        {% if log.ip_address %}
-                        <p class="text-xs text-gray-400 font-mono">{{ log.ip_address }}</p>
-                        {% endif %}
-                        {% if log.details %}
-                        <p class="text-xs text-gray-600 mt-1">{{ log.details }}</p>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p class="text-sm text-gray-500 italic">{% trans "No access logs available" %}</p>
-                {% endif %}
-            </div>
             
             <!-- GDPR Notice -->
             <div class="mt-6 bg-purple-50 border border-purple-200 rounded-lg p-4">

@@ -123,17 +123,17 @@ def analysis_dashboard_view(request):
                     from .services import predict_alex_probability
 
                     manual_result = {
-                        "model_label": "Alex 5050 model",
+                        "model_label": "Lifestyle-Based Diabetes Risk Model",
                         "patient_label": None,
                     }
                     manual_result.update(predict_alex_probability(alex_form.to_feature_payload()))
-                    log_access(request.user, None, "search", request, details="Manual Alex 5050 analysis")
+                    log_access(request.user, None, "search", request, details="Manual Lifestyle-Based Diabetes Risk Model analysis")
                     record_analysis_request("alex5050", "manual", "success")
                 except ValueError as exc:
                     manual_error = str(exc)
                     record_analysis_request("alex5050", "manual", "error")
-            else:
-                manual_error = "Please complete all fields in the Alex 5050 section."
+                else:
+                    manual_error = "Please complete all fields in the Lifestyle-Based Diabetes Risk Model section."
                 record_analysis_request("alex5050", "manual", "invalid_form")
 
         elif action == "manual_mustafa":
@@ -143,17 +143,17 @@ def analysis_dashboard_view(request):
                     from .services import predict_mustafa_probability
 
                     manual_result = {
-                        "model_label": "Mustafa model",
+                        "model_label": "Clinical Diabetes Risk Model",
                         "patient_label": None,
                     }
                     manual_result.update(predict_mustafa_probability(mustafa_form.to_feature_payload()))
-                    log_access(request.user, None, "search", request, details="Manual Mustafa analysis")
+                    log_access(request.user, None, "search", request, details="Manual Clinical Diabetes Risk Model analysis")
                     record_analysis_request("mustafa", "manual", "success")
                 except ValueError as exc:
                     manual_error = str(exc)
                     record_analysis_request("mustafa", "manual", "error")
             else:
-                manual_error = "Please complete all fields in the Mustafa section."
+                manual_error = "Please complete all fields in the Clinical Diabetes Risk Model section."
                 record_analysis_request("mustafa", "manual", "invalid_form")
 
         elif action == "quick_patient":
@@ -173,12 +173,12 @@ def analysis_dashboard_view(request):
                             from .services import predict_alex_probability
 
                             quick_result = predict_alex_probability(clinical_record.alex5050_features())
-                            quick_result["model_label"] = "Alex 5050 model"
+                            quick_result["model_label"] = "Lifestyle-Based Diabetes Risk Model"
                         else:
                             from .services import predict_mustafa_probability
 
                             quick_result = predict_mustafa_probability(clinical_record.mustafa_features())
-                            quick_result["model_label"] = "Mustafa model"
+                            quick_result["model_label"] = "Clinical Diabetes Risk Model"
 
                         quick_result["patient_label"] = quick_patient.get_full_name()
                         log_access(

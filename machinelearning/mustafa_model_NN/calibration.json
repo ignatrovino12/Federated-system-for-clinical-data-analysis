@@ -1,11 +1,11 @@
 {
   "method": "bias_only",
-  "temperature": 1.1,
-  "coef": 1.1,
-  "intercept": -0.05,
-  "decision_threshold": 0.11546068592903945,
+  "temperature": 1.0,
+  "coef": 1.0,
+  "intercept": -0.125,
+  "decision_threshold": 0.08431434582407372,
   "target_recall": 0.95,
-  "fitted_at": "2026-06-09T17:43:12.650180+00:00",
+  "fitted_at": "2026-06-11T13:04:58.741810+00:00",
   "n_samples": 246,
   "source_model": "mustafa",
   "calibration_size": 0.3

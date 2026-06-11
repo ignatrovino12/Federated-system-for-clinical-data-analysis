@@ -316,8 +316,8 @@ class MustafaManualAnalysisForm(forms.Form):
 class ClinicalAnalysisSelectionForm(forms.Form):
     MODEL_CHOICES = [
         ("", _("Select one")),
-        ("alex", _("Alex 5050 model")),
-        ("mustafa", _("Mustafa model")),
+        ("alex", _("Lifestyle-Based Diabetes Risk Model")),
+        ("mustafa", _("Clinical Diabetes Risk Model")),
     ]
 
     model = forms.ChoiceField(

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: healthcheck\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-25 15:55+0000\n"
+"POT-Creation-Date: 2026-06-10 14:15+0000\n"
 "PO-Revision-Date: 2026-05-23 00:00+0000\n"
 "Last-Translator: Translator <translator@example.com>\n"
 "Language-Team: Romanian\n"
@@ -19,11 +19,11 @@ msgstr ""
 msgid "Select one"
 msgstr "Selectați una"
 
-#: clinical_ai/forms.py:11 pubsub/templates/main/profile.html:49
+#: clinical_ai/forms.py:11 pubsub/templates/main/profile.html:60
 msgid "Yes"
 msgstr "Da"
 
-#: clinical_ai/forms.py:12 pubsub/templates/main/profile.html:49
+#: clinical_ai/forms.py:12 pubsub/templates/main/profile.html:60
 msgid "No"
 msgstr "Nu"
 
@@ -253,13 +253,13 @@ msgstr "Boală de inimă sau infarct"
 
 #: clinical_ai/forms.py:319
 #: clinical_ai/templates/clinical_ai/analysis_dashboard.html:52
-msgid "Alex 5050 model"
-msgstr "Modelul Alex 5050"
+msgid "Lifestyle-Based Diabetes Risk Model"
+msgstr "Model de prezicerea diabetului bazat pe stilul de viață"
 
 #: clinical_ai/forms.py:320
 #: clinical_ai/templates/clinical_ai/analysis_dashboard.html:80
-msgid "Mustafa model"
-msgstr "Modelul Mustafa"
+msgid "Clinical Diabetes Risk Model"
+msgstr "Model de prezicerea diabetului bazat pe date clinice"
 
 #: clinical_ai/forms.py:326
 msgid "Analysis model"
@@ -283,23 +283,31 @@ msgstr "Fără diabet confirmat"
 msgid "Not confirmed"
 msgstr "Neconfirmat"
 
-#: clinical_ai/templates/admin/clinical_ai/patientclinicalrecord/change_list.html:7
+#: clinical_ai/templates/admin/clinical_ai/patientclinicalrecord/change_list.html:8
+msgid "A newer federated model is available."
+msgstr ""
+
+#: clinical_ai/templates/admin/clinical_ai/patientclinicalrecord/change_list.html:13
+msgid "Sync now"
+msgstr ""
+
+#: clinical_ai/templates/admin/clinical_ai/patientclinicalrecord/change_list.html:25
 #, fuzzy
 #| msgid "Alex 5050 model"
 msgid "Sync Alex5050 Latest Model"
 msgstr "Modelul Alex 5050"
 
-#: clinical_ai/templates/admin/clinical_ai/patientclinicalrecord/change_list.html:12
+#: clinical_ai/templates/admin/clinical_ai/patientclinicalrecord/change_list.html:30
 #, fuzzy
 #| msgid "Mustafa model"
 msgid "Sync Mustafa Latest Model"
 msgstr "Modelul Mustafa"
 
-#: clinical_ai/templates/admin/clinical_ai/patientclinicalrecord/change_list.html:17
+#: clinical_ai/templates/admin/clinical_ai/patientclinicalrecord/change_list.html:35
 msgid "Clear Alex5050 Cache"
 msgstr ""
 
-#: clinical_ai/templates/admin/clinical_ai/patientclinicalrecord/change_list.html:22
+#: clinical_ai/templates/admin/clinical_ai/patientclinicalrecord/change_list.html:40
 msgid "Clear Mustafa Cache"
 msgstr ""
 
@@ -353,16 +361,20 @@ msgid "Manual"
 msgstr "Manual"
 
 #: clinical_ai/templates/clinical_ai/analysis_dashboard.html:71
-msgid "Run Alex 5050 analysis"
-msgstr "Rulează analiza Alex 5050"
+#, fuzzy
+#| msgid "Lifestyle-Based Diabetes Risk Model"
+msgid "Run Lifestyle-Based Risk Model Analysis"
+msgstr "Model de prezicerea diabetului bazat pe stilul de viață"
 
 #: clinical_ai/templates/clinical_ai/analysis_dashboard.html:81
 msgid "Core clinical measurements and diabetes-related risk factors."
 msgstr "Măsurători clinice de bază și factori de risc legați de diabet."
 
 #: clinical_ai/templates/clinical_ai/analysis_dashboard.html:97
-msgid "Run Mustafa analysis"
-msgstr "Rulează analiza Mustafa"
+#, fuzzy
+#| msgid "Clinical Diabetes Risk Model"
+msgid "Run Clinical Diabetes Risk Model Analysis"
+msgstr "Model de prezicerea diabetului bazat pe date clinice"
 
 #: clinical_ai/templates/clinical_ai/analysis_dashboard.html:106
 msgid "Patient record analysis"
@@ -453,30 +465,30 @@ msgid "CI Number"
 msgstr "Număr CI"
 
 #: pubsub/forms.py:100 pubsub/forms.py:124
-#: pubsub/templates/patient/patient_detail.html:70
+#: pubsub/templates/patient/patient_detail.html:64
 msgid "Last Name"
 msgstr "Nume"
 
 #: pubsub/forms.py:104 pubsub/forms.py:125
-#: pubsub/templates/patient/patient_detail.html:66
+#: pubsub/templates/patient/patient_detail.html:60
 msgid "First Name"
 msgstr "Prenume"
 
 #: pubsub/forms.py:112 pubsub/forms.py:127
-#: pubsub/templates/patient/patient_detail.html:84
+#: pubsub/templates/patient/patient_detail.html:78
 #: pubsub/templates/patient/patient_edit.html:53
 msgid "Nationality"
 msgstr "Naționalitate"
 
 #: pubsub/forms.py:116 pubsub/forms.py:133
 #: pubsub/templates/appointment/appointment_detail.html:45
-#: pubsub/templates/patient/patient_detail.html:185
+#: pubsub/templates/patient/patient_detail.html:176
 #: pubsub/templates/patient/patient_edit.html:131
 msgid "City"
 msgstr "Oraș"
 
 #: pubsub/forms.py:120 pubsub/forms.py:134
-#: pubsub/templates/patient/patient_detail.html:189
+#: pubsub/templates/patient/patient_detail.html:180
 #: pubsub/templates/patient/patient_edit.html:141
 msgid "County"
 msgstr "Județ"
@@ -485,11 +497,11 @@ msgstr "Județ"
 msgid "Date of Birth"
 msgstr "Data nașterii"
 
-#: pubsub/forms.py:131 pubsub/templates/patient/patient_detail.html:144
+#: pubsub/forms.py:131 pubsub/templates/patient/patient_detail.html:136
 msgid "Phone Number"
 msgstr "Număr de telefon"
 
-#: pubsub/forms.py:132 pubsub/templates/patient/patient_detail.html:161
+#: pubsub/forms.py:132 pubsub/templates/patient/patient_detail.html:153
 msgid "Email Address"
 msgstr "Adresă de email"
 
@@ -828,7 +840,7 @@ msgid "Clinic Management Dashboard"
 msgstr "Panou de administrare al clinicii"
 
 #: pubsub/templates/main/dashboard.html:15
-#: pubsub/templates/main/profile.html:35
+#: pubsub/templates/main/profile.html:46
 #: pubsub/templates/patient/patient_list.html:15
 msgid "Role:"
 msgstr "Rol:"
@@ -891,78 +903,82 @@ msgstr "Sistem HealthCheck"
 msgid "Profile - HealthCheck System"
 msgstr "Pacienți - Sistem HealthCheck"
 
-#: pubsub/templates/main/profile.html:16
+#: pubsub/templates/main/profile.html:14
 #, fuzzy
 #| msgid "Profile"
 msgid "User Profile"
 msgstr "Profil"
 
-#: pubsub/templates/main/profile.html:20
+#: pubsub/templates/main/profile.html:19
+msgid "Admin access"
+msgstr ""
+
+#: pubsub/templates/main/profile.html:19
+msgid "Standard access"
+msgstr ""
+
+#: pubsub/templates/main/profile.html:31
 msgid "Username:"
 msgstr "Nume de utilizator:"
 
-#: pubsub/templates/main/profile.html:25
+#: pubsub/templates/main/profile.html:36
 #: pubsub/templates/patient/patient_delete.html:18
 msgid "Full Name:"
 msgstr "Nume complet:"
 
-#: pubsub/templates/main/profile.html:26 pubsub/templates/main/profile.html:31
+#: pubsub/templates/main/profile.html:37 pubsub/templates/main/profile.html:42
 #, fuzzy
 #| msgid "Not assigned"
 msgid "Not set"
 msgstr "Nesetat"
 
-#: pubsub/templates/main/profile.html:30
+#: pubsub/templates/main/profile.html:41
 msgid "Email:"
 msgstr "Adresă de email:"
 
-#: pubsub/templates/main/profile.html:42
+#: pubsub/templates/main/profile.html:53
 msgid "Not assigned"
 msgstr "Nedistribuit"
 
-#: pubsub/templates/main/profile.html:48
+#: pubsub/templates/main/profile.html:59
 #, fuzzy
 #| msgid "Admin"
 msgid "Admin:"
 msgstr "Administrare"
 
-#: pubsub/templates/main/profile.html:56
+#: pubsub/templates/main/profile.html:66
 msgid "Your Permissions"
 msgstr "Permisiunile dvs."
 
-#: pubsub/templates/main/profile.html:60
+#: pubsub/templates/main/profile.html:70
 #, fuzzy
 #| msgid "Viewing Masked Patient Data"
 msgid "View full patient data"
 msgstr "Vizualizează datele complete ale pacientului"
 
-#: pubsub/templates/main/profile.html:64
+#: pubsub/templates/main/profile.html:74
 #, fuzzy
 #| msgid "Patient record analysis"
 msgid "Edit patient records"
 msgstr "Editează fișele pacientului"
 
-#: pubsub/templates/main/profile.html:68
+#: pubsub/templates/main/profile.html:78
 #, fuzzy
 #| msgid "Delete Patient"
 msgid "Delete patient records"
 msgstr "Șterge fișele pacientului"
 
-#: pubsub/templates/main/profile.html:79
-msgid "My Recent Activity"
-msgstr "Activitatea mea recentă"
+#: pubsub/templates/main/profile.html:86
+#, fuzzy
+#| msgid "Privacy Note:"
+msgid "Privacy Notice"
+msgstr "Notă de confidențialitate:"
 
-#: pubsub/templates/main/profile.html:80
-msgid "Your last 20 actions"
-msgstr "Ultimele 20 de acțiuni"
-
-#: pubsub/templates/main/profile.html:102
-msgid "No activity yet"
-msgstr "Nicio activitate încă"
-
-#: pubsub/templates/main/profile.html:108
-msgid "View Full History"
-msgstr "Vezi istoricul complet"
+#: pubsub/templates/main/profile.html:87
+msgid ""
+"All your actions are logged for security and compliance purposes. Access to "
+"patient data is monitored and must comply with GDPR regulations."
+msgstr ""
 
 #: pubsub/templates/patient/patient_add.html:4
 #, fuzzy
@@ -980,25 +996,25 @@ msgid "Enter patient information below"
 msgstr "Introduceți mai jos informațiile despre pacient"
 
 #: pubsub/templates/patient/patient_add.html:19
-#: pubsub/templates/patient/patient_detail.html:63
+#: pubsub/templates/patient/patient_detail.html:57
 #: pubsub/templates/patient/patient_edit.html:19
 msgid "Personal Information"
 msgstr "Informații personale"
 
 #: pubsub/templates/patient/patient_add.html:65
-#: pubsub/templates/patient/patient_detail.html:92
+#: pubsub/templates/patient/patient_detail.html:85
 #: pubsub/templates/patient/patient_edit.html:65
 msgid "Identity Document"
 msgstr "Document de identitate"
 
 #: pubsub/templates/patient/patient_add.html:101
-#: pubsub/templates/patient/patient_detail.html:141
+#: pubsub/templates/patient/patient_detail.html:133
 #: pubsub/templates/patient/patient_edit.html:101
 msgid "Contact Information"
 msgstr "Informații de contact"
 
 #: pubsub/templates/patient/patient_add.html:127
-#: pubsub/templates/patient/patient_detail.html:182
+#: pubsub/templates/patient/patient_detail.html:173
 #: pubsub/templates/patient/patient_edit.html:127
 msgid "Address"
 msgstr "Adresa"
@@ -1055,11 +1071,34 @@ msgstr "Date medicale - %(patient_name)s"
 msgid "Back to Patient List"
 msgstr "Înapoi la lista de pacienți"
 
-#: pubsub/templates/patient/patient_detail.html:22
+#: pubsub/templates/patient/patient_detail.html:18
+msgid "Patient Details"
+msgstr "Detalii pacient"
+
+#: pubsub/templates/patient/patient_detail.html:19
+msgid "Full medical record information"
+msgstr "Informații complete din dosarul medical"
+
+#: pubsub/templates/patient/patient_detail.html:25
+#: pubsub/templates/patient/patient_list.html:98
+#: pubsub/templates/patient/patient_list.html:127
+msgid "Edit"
+msgstr "Editează"
+
+#: pubsub/templates/patient/patient_detail.html:29
+msgid "Medical Data"
+msgstr "Date medicale"
+
+#: pubsub/templates/patient/patient_detail.html:35
+#: pubsub/templates/patient/patient_list.html:133
+msgid "Delete"
+msgstr "Șterge"
+
+#: pubsub/templates/patient/patient_detail.html:46
 msgid "Viewing Full Medical Data"
 msgstr "Vizualizarea datelor medicale complete"
 
-#: pubsub/templates/patient/patient_detail.html:23
+#: pubsub/templates/patient/patient_detail.html:47
 msgid ""
 "This access has been logged. Handle patient information responsibly and in "
 "compliance with GDPR regulations."
@@ -1067,11 +1106,11 @@ msgstr ""
 "Acest acces a fost înregistrat. Gestionați informațiile pacientului în mod "
 "responsabil și în conformitate cu reglementările GDPR."
 
-#: pubsub/templates/patient/patient_detail.html:25
+#: pubsub/templates/patient/patient_detail.html:49
 msgid "Viewing Masked Patient Data"
 msgstr "Vizualizarea datelor mascate ale pacientului"
 
-#: pubsub/templates/patient/patient_detail.html:26
+#: pubsub/templates/patient/patient_detail.html:50
 #, fuzzy
 #| msgid ""
 #| "Sensitive data is masked for privacy. Click \"View\" to see full details "
@@ -1084,105 +1123,70 @@ msgstr ""
 "\"Vizualizează\" pentru a vedea detaliile complete (accesul va fi "
 "înregistrat)."
 
-#: pubsub/templates/patient/patient_detail.html:38
-msgid "Patient Details"
-msgstr "Detalii pacient"
-
-#: pubsub/templates/patient/patient_detail.html:39
-msgid "Full medical record information"
-msgstr "Informații complete din dosarul medical"
-
-#: pubsub/templates/patient/patient_detail.html:45
-#: pubsub/templates/patient/patient_list.html:98
-#: pubsub/templates/patient/patient_list.html:127
-msgid "Edit"
-msgstr "Editează"
-
-#: pubsub/templates/patient/patient_detail.html:49
-msgid "Medical Data"
-msgstr "Date medicale"
-
-#: pubsub/templates/patient/patient_detail.html:55
-#: pubsub/templates/patient/patient_list.html:133
-msgid "Delete"
-msgstr "Șterge"
-
-#: pubsub/templates/patient/patient_detail.html:74
+#: pubsub/templates/patient/patient_detail.html:68
 msgid "Date of Birth / Age"
 msgstr "Data nașterii / Vârsta"
 
-#: pubsub/templates/patient/patient_detail.html:79
+#: pubsub/templates/patient/patient_detail.html:73
 msgid "years old"
 msgstr "ani"
 
-#: pubsub/templates/patient/patient_detail.html:95
+#: pubsub/templates/patient/patient_detail.html:88
 msgid "CNP (Cod Numeric Personal)"
 msgstr "CNP (Cod Numeric Personal)"
 
-#: pubsub/templates/patient/patient_detail.html:101
+#: pubsub/templates/patient/patient_detail.html:94
 msgid "masked for privacy"
 msgstr "mascat pentru confidențialitate"
 
-#: pubsub/templates/patient/patient_detail.html:106
+#: pubsub/templates/patient/patient_detail.html:99
 msgid "ID Card Series"
 msgstr "Seria buletinului"
 
-#: pubsub/templates/patient/patient_detail.html:116
+#: pubsub/templates/patient/patient_detail.html:109
 msgid "ID Card Number"
 msgstr "Număr buletin"
 
-#: pubsub/templates/patient/patient_detail.html:122
-#: pubsub/templates/patient/patient_detail.html:155
-#: pubsub/templates/patient/patient_detail.html:172
+#: pubsub/templates/patient/patient_detail.html:115
+#: pubsub/templates/patient/patient_detail.html:147
+#: pubsub/templates/patient/patient_detail.html:164
 msgid "masked"
 msgstr "mascat"
 
-#: pubsub/templates/patient/patient_detail.html:127
+#: pubsub/templates/patient/patient_detail.html:120
 msgid "Full ID"
 msgstr "ID complet"
 
-#: pubsub/templates/patient/patient_detail.html:150
-#: pubsub/templates/patient/patient_detail.html:167
+#: pubsub/templates/patient/patient_detail.html:142
+#: pubsub/templates/patient/patient_detail.html:159
 msgid "Not provided"
 msgstr "Nespecificat"
 
-#: pubsub/templates/patient/patient_detail.html:201
-msgid "Access Log"
-msgstr "Jurnal de acces"
-
-#: pubsub/templates/patient/patient_detail.html:202
-msgid "Recent access history for this patient"
-msgstr "Istoric recent de acces pentru acest pacient"
-
-#: pubsub/templates/patient/patient_detail.html:225
-msgid "No access logs available"
-msgstr "Nu există jurnale de acces disponibile"
-
-#: pubsub/templates/patient/patient_detail.html:231
+#: pubsub/templates/patient/patient_detail.html:189
 msgid "GDPR Compliance"
 msgstr "Conformitate GDPR"
 
-#: pubsub/templates/patient/patient_detail.html:233
+#: pubsub/templates/patient/patient_detail.html:191
 msgid "This patient has the right to:"
 msgstr "Acest pacient are dreptul la:"
 
-#: pubsub/templates/patient/patient_detail.html:234
+#: pubsub/templates/patient/patient_detail.html:192
 msgid "Access their data"
 msgstr "Acces la datele lor"
 
-#: pubsub/templates/patient/patient_detail.html:235
+#: pubsub/templates/patient/patient_detail.html:193
 msgid "Request corrections"
 msgstr "Solicitarea corecțiilor"
 
-#: pubsub/templates/patient/patient_detail.html:236
+#: pubsub/templates/patient/patient_detail.html:194
 msgid "Request deletion"
 msgstr "Solicitarea ștergerii"
 
-#: pubsub/templates/patient/patient_detail.html:237
+#: pubsub/templates/patient/patient_detail.html:195
 msgid "Data portability"
 msgstr "Portabilitatea datelor"
 
-#: pubsub/templates/patient/patient_detail.html:238
+#: pubsub/templates/patient/patient_detail.html:196
 msgid "Restrict processing"
 msgstr "Restricționarea prelucrării"
 
@@ -1385,6 +1389,39 @@ msgid "Enter a name, CNP, or location above to find patient records"
 msgstr ""
 "Introduceți un nume, CNP sau locație deasupra pentru a găsi înregistrări ale "
 "pacienților"
+
+#~ msgid "Alex 5050 model"
+#~ msgstr "Modelul Alex 5050"
+
+#~ msgid "Mustafa model"
+#~ msgstr "Modelul Mustafa"
+
+#~ msgid "Run Alex 5050 analysis"
+#~ msgstr "Rulează analiza Alex 5050"
+
+#~ msgid "Run Mustafa analysis"
+#~ msgstr "Rulează analiza Mustafa"
+
+#~ msgid "My Recent Activity"
+#~ msgstr "Activitatea mea recentă"
+
+#~ msgid "Your last 20 actions"
+#~ msgstr "Ultimele 20 de acțiuni"
+
+#~ msgid "No activity yet"
+#~ msgstr "Nicio activitate încă"
+
+#~ msgid "View Full History"
+#~ msgstr "Vezi istoricul complet"
+
+#~ msgid "Access Log"
+#~ msgstr "Jurnal de acces"
+
+#~ msgid "Recent access history for this patient"
+#~ msgstr "Istoric recent de acces pentru acest pacient"
+
+#~ msgid "No access logs available"
+#~ msgstr "Nu există jurnale de acces disponibile"
 
 #~ msgid "Total:"
 #~ msgstr "Total:"

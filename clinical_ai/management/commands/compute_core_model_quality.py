@@ -256,6 +256,7 @@ class Command(BaseCommand):
         parser.add_argument("--seed", type=int, default=42)
         parser.add_argument("--threshold", type=float, default=None)
         parser.add_argument("--bootstrap-samples", type=int, default=1000)
+        parser.add_argument("--save-predictions", action="store_true", help="Include per-sample y_true and y_pred in the output JSON")
         parser.add_argument("--output", type=str, default=None)
 
     def handle(self, *args, **options):
@@ -265,6 +266,7 @@ class Command(BaseCommand):
         threshold_override = options["threshold"]
         bootstrap_samples = int(options["bootstrap_samples"])
         output_path = options["output"]
+        save_predictions = bool(options.get("save_predictions", False))
 
         if not (0.05 <= test_size <= 0.5):
             raise CommandError("--test-size must be between 0.05 and 0.5")
@@ -404,6 +406,14 @@ class Command(BaseCommand):
             },
             "evaluation_record_ids": [int(record_id) for record_id in ids_test.tolist()],
         }
+
+        if save_predictions:
+            # include per-sample arrays for downstream plotting/analysis
+            report["per_sample"] = {
+                "y_true": [int(x) for x in y_test.tolist()],
+                "y_pred_raw": [float(x) for x in probabilities.tolist()],
+                "y_pred_calibrated": [float(x) for x in calibrated_probabilities.tolist()],
+            }
 
         if output_path is None:
             timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
