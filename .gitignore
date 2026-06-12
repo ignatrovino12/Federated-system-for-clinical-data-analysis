@@ -71,4 +71,6 @@ coverage.xml
 
 # Documenation
 z.txt
-reports/figures/
+
+# reports
+reports/

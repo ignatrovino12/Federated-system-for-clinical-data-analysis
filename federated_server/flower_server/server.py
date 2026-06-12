@@ -9,6 +9,7 @@ import io
 import json
 from time import perf_counter
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, Optional, Tuple, List
 
 import flwr as fl
@@ -109,6 +110,28 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     return {"accuracy": sum(accuracies) / sum(examples)}
 
 
+def weighted_fit_metrics(metrics: List[Tuple[int, Metrics]]) -> Metrics:
+    """Aggregate fit metrics reported by clients using example-count weighting."""
+    if not metrics:
+        return {}
+
+    weighted: Dict[str, float] = {}
+    totals: Dict[str, float] = {}
+    for num_examples, metric_map in metrics:
+        for metric_name, metric_value in metric_map.items():
+            if not isinstance(metric_value, (int, float)):
+                continue
+            weighted[metric_name] = weighted.get(metric_name, 0.0) + float(num_examples) * float(metric_value)
+            totals[metric_name] = totals.get(metric_name, 0.0) + float(num_examples)
+
+    aggregated: Dict[str, float] = {}
+    for metric_name, weighted_sum in weighted.items():
+        total_examples = totals.get(metric_name, 0.0)
+        if total_examples > 0:
+            aggregated[metric_name] = weighted_sum / total_examples
+    return aggregated
+
+
 def _fit_config(server_round: int) -> Dict[str, float]:
     """Ask clients to do a little more local work so the update can move off the prior."""
     if server_round <= 2:
@@ -130,8 +153,44 @@ class FederatedStrategy(FedAvg):
         self.round_count = 0
         self.minio_client = minio_client
         self.bucket_name = bucket_name
+        self.export_round_history = os.getenv("FLOWER_EXPORT_ROUND_HISTORY", "false").lower() == "true"
+        self.run_started_at = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+        self.round_history: Dict[int, Dict[str, object]] = {}
+        self.round_history_path: Optional[Path] = None
         # final_round will be assigned by the server at startup
         self.final_round: Optional[int] = None
+
+    def _round_history_root(self) -> Path:
+        return Path(__file__).resolve().parents[1] / "reports" / "model_quality"
+
+    def _ensure_round_history_path(self, model_name: str) -> Path:
+        if self.round_history_path is None:
+            safe_model = model_name if model_name and model_name != "unknown" else "unknown"
+            self.round_history_path = self._round_history_root() / f"federated_round_history_{safe_model}_{self.run_started_at}.json"
+            self.round_history_path.parent.mkdir(parents=True, exist_ok=True)
+        return self.round_history_path
+
+    def _update_round_history(self, model_name: str, server_round: int, section: str, payload: Dict[str, object]) -> None:
+        if not self.export_round_history:
+            return
+        history_path = self._ensure_round_history_path(model_name)
+        entry = self.round_history.setdefault(
+            int(server_round),
+            {
+                "round": int(server_round),
+                "model": model_name,
+            },
+        )
+        entry["model"] = model_name
+        entry[section] = payload
+        ordered_history = [self.round_history[key] for key in sorted(self.round_history)]
+        history_payload = {
+            "generated_at": datetime.utcnow().isoformat() + "Z",
+            "run_started_at": self.run_started_at,
+            "model": model_name,
+            "rounds": ordered_history,
+        }
+        history_path.write_text(json.dumps(history_payload, indent=2), encoding="utf-8")
     
     def aggregate_fit(
         self,
@@ -162,6 +221,24 @@ class FederatedStrategy(FedAvg):
             self._save_checkpoint(server_round, aggregated_params)
             self._publish_model_update_notice(model_name, server_round)
 
+        fit_examples = sum(int(getattr(fit_res, "num_examples", 0)) for _, fit_res in results) if results else 0
+        fit_metrics = weighted_fit_metrics([
+            (int(getattr(fit_res, "num_examples", 0)), getattr(fit_res, "metrics", {}))
+            for _, fit_res in results
+        ])
+        self._update_round_history(
+            model_name=model_name,
+            server_round=server_round,
+            section="fit",
+            payload={
+                "clients": int(len(results)),
+                "examples": int(fit_examples),
+                "duration_seconds": float(perf_counter() - round_start),
+                "status": "success" if aggregated_params else "no_aggregation",
+                "metrics": fit_metrics,
+            },
+        )
+
         record_flower_round(
             model=model_name,
             round_number=server_round,
@@ -171,6 +248,43 @@ class FederatedStrategy(FedAvg):
         )
         
         return aggregated_params, aggregated_metrics
+
+    def aggregate_evaluate(self, server_round: int, results, failures):
+        """Aggregate client evaluation metrics and persist a per-round history entry."""
+        aggregated_loss, aggregated_metrics = super().aggregate_evaluate(server_round, results, failures)
+
+        model_name = "unknown"
+        if results:
+            try:
+                model_name = self._infer_model_name(parameters_to_ndarrays(results[0][1].parameters))
+            except Exception:
+                model_name = "unknown"
+
+        total_examples = sum(int(getattr(evaluate_res, "num_examples", 0)) for _, evaluate_res in results) if results else 0
+        weighted_accuracy = None
+        if results:
+            accuracies = [
+                int(getattr(evaluate_res, "num_examples", 0))
+                * float(getattr(evaluate_res, "metrics", {}).get("accuracy", 0.0))
+                for _, evaluate_res in results
+            ]
+            if total_examples > 0:
+                weighted_accuracy = sum(accuracies) / total_examples
+
+        self._update_round_history(
+            model_name=model_name,
+            server_round=server_round,
+            section="evaluate",
+            payload={
+                "clients": int(len(results)),
+                "examples": int(total_examples),
+                "loss": float(aggregated_loss) if aggregated_loss is not None else None,
+                "accuracy": float(weighted_accuracy) if weighted_accuracy is not None else None,
+                "metrics": aggregated_metrics,
+            },
+        )
+
+        return aggregated_loss, aggregated_metrics
 
     def _publish_model_update_notice(self, model_name: str, round_num: int) -> None:
         """Persist a small notice so clinic admins know a newer model is available."""
@@ -313,6 +427,7 @@ def create_strategy(minio_client: Optional[Minio] = None) -> FederatedStrategy:
         min_fit_clients=min_fit_clients,
         min_evaluate_clients=min_evaluate_clients,
         min_available_clients=min_available_clients,
+        fit_metrics_aggregation_fn=weighted_fit_metrics,
         evaluate_metrics_aggregation_fn=weighted_average,
         on_fit_config_fn=_fit_config,
         minio_client=minio_client,

@@ -1,5 +1,3 @@
-- collect and show statistics (why the solution is good)
-
 - each client works only on one network
 - TLS - needs changes when in production  + k3s
 
@@ -8,8 +6,10 @@ Optional:
 - weights - reverse attack - to make for a better security
 
 TODO THesis:
+- write conclusion + introduction for metrics chapter
 - change C2 diagrams font ( make it bigger ) - grpc not rpc, no nginx - use k3s ingress controller instead
 - write about kubernetes/cloudflare after site is deployed + deployment diagram
+- statistics for Systems/Efficiency Metrics 
 - bibliography -add django, django guardian docs etc
 
 
