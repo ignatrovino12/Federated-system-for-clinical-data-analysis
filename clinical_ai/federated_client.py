@@ -79,6 +79,21 @@ def set_weights(model: nn.Module, weights: List[np.ndarray]) -> None:
     model.load_state_dict(state_dict, strict=True)
 
 
+def load_federated_checkpoint(model_path: Path, model: nn.Module) -> None:
+    if model_path.suffix == ".npz":
+        with np.load(model_path, allow_pickle=False) as checkpoint:
+            param_keys = sorted(
+                (key for key in checkpoint.files if key.startswith("param_")),
+                key=lambda key: int(key.split("_", 1)[1]),
+            )
+            weights = [checkpoint[key] for key in param_keys]
+        set_weights(model, weights)
+        return
+
+    state_dict = torch.load(model_path, map_location="cpu")
+    model.load_state_dict(state_dict, strict=True)
+
+
 def train(
     model: nn.Module,
     train_loader: DataLoader,
@@ -375,8 +390,7 @@ def create_client(
     local_model_path = get_local_federated_model_path(model_type)
     if local_model_path.exists():
         try:
-            state_dict = torch.load(local_model_path, map_location="cpu")
-            model.load_state_dict(state_dict, strict=True)
+            load_federated_checkpoint(local_model_path, model)
             logger.info(f"Loaded local federated model from {local_model_path}")
         except Exception as e:
             logger.warning(f"Failed to load local federated model from {local_model_path}: {e}. Using fresh model.")

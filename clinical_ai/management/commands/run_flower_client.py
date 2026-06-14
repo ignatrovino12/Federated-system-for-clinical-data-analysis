@@ -73,6 +73,16 @@ def _load_feature_scaler(model_type: str):
     return joblib.load(scaler_path)
 
 
+def _load_root_certificates(root_certificates: Optional[str]) -> Optional[bytes]:
+    if not root_certificates:
+        return None
+
+    root_path = Path(root_certificates)
+    if root_path.exists():
+        return root_path.read_bytes()
+    return root_certificates.encode("utf-8")
+
+
 class Command(BaseCommand):
     help = "Train locally on clinic data and connect this Django instance as a Flower client."
 
@@ -85,8 +95,26 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             "--server-address",
-            default=os.getenv("FLOWER_SERVER_ADDRESS", "flower-server:8080"),
-            help="Flower server address (host:port). Defaults to FLOWER_SERVER_ADDRESS or flower-server:8080.",
+            default=os.getenv("FLOWER_SERVER_ADDRESS", "flower.vladar34.xyz:443"),
+            help="Flower server address (host:port). Defaults to FLOWER_SERVER_ADDRESS or flower.vladar34.xyz:443.",
+        )
+        parser.add_argument(
+            "--secure",
+            dest="insecure",
+            action="store_false",
+            help="Use a secure TLS connection for Flower gRPC.",
+        )
+        parser.add_argument(
+            "--insecure",
+            dest="insecure",
+            action="store_true",
+            help="Use an insecure gRPC connection for Flower.",
+        )
+        parser.set_defaults(insecure=os.getenv("FLOWER_INSECURE", "false").lower() == "true")
+        parser.add_argument(
+            "--root-certificates",
+            default=os.getenv("FLOWER_ROOT_CERTIFICATES"),
+            help="Path to PEM root certificates for TLS validation.",
         )
         parser.add_argument(
             "--min-samples",
@@ -284,4 +312,9 @@ class Command(BaseCommand):
             training_sample_fraction=_training_sample_fraction(),
         )
 
-        fl.client.start_client(server_address=server_address, client=client.to_client())
+        fl.client.start_client(
+            server_address=server_address,
+            client=client.to_client(),
+            insecure=options["insecure"],
+            root_certificates=_load_root_certificates(options["root_certificates"]),
+        )

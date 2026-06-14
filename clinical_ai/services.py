@@ -1,9 +1,11 @@
 from functools import lru_cache
 import logging
+from collections import OrderedDict
 from pathlib import Path
 from typing import Optional, Tuple
 
 import joblib
+import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
@@ -46,6 +48,21 @@ def _file_signature(path: Path) -> Tuple[bool, Optional[float], Optional[int]]:
         return (False, None, None)
     stat_result = path.stat()
     return (True, stat_result.st_mtime, stat_result.st_size)
+
+
+def _load_federated_weights(path: Path):
+    try:
+        with np.load(path, allow_pickle=False) as checkpoint:
+            param_keys = sorted(
+                (key for key in checkpoint.files if key.startswith("param_")),
+                key=lambda key: int(key.split("_", 1)[1]),
+            )
+            return [checkpoint[key] for key in param_keys]
+    except Exception:
+        state_dict = torch.load(path, map_location="cpu")
+        if hasattr(state_dict, "values"):
+            return [value.detach().cpu().numpy() for value in state_dict.values()]
+        raise
 
 
 def _alex_model_signature() -> Tuple[Tuple[bool, Optional[float], Optional[int]], Tuple[bool, Optional[float], Optional[int]], Tuple[bool, Optional[float], Optional[int]]]:
@@ -188,7 +205,12 @@ def _load_alex_artifacts_cached(signature):
     calibration = load_calibration_state(calibration_path)
     if federated_model_path.exists():
         model = FederatedAlexDiabetesNet(input_size=len(feature_columns)).to(device)
-        state_dict = torch.load(federated_model_path, map_location=device)
+        weights = _load_federated_weights(federated_model_path)
+        expected_keys = list(model.state_dict().keys())
+        state_dict = OrderedDict(
+            (key, torch.tensor(value, dtype=torch.float32))
+            for key, value in zip(expected_keys, weights)
+        )
         source_path = federated_model_path
         outputs_probability = False
     else:
@@ -251,19 +273,27 @@ def _load_mustafa_artifacts_cached(signature):
     scaler_feature_names = getattr(scaler, "feature_names_in_", None)
     calibration_path = artifact_dir / "calibration.json"
     calibration = load_calibration_state(calibration_path)
-    state_dict = torch.load(model_path, map_location=device)
     if model_path == federated_model_path:
         model = FederatedMustafaDiabetesNet(input_size=len(feature_columns)).to(device)
-        outputs_probability = False
-    elif any(key.startswith("raw_monotonic_weights") for key in state_dict.keys()):
-        model = MonotonicMustafaDiabetesNet(
-            input_dim=len(feature_columns),
-            monotonic_feature_idx=monotonic_feature_idx,
-        ).to(device)
+        weights = _load_federated_weights(model_path)
+        expected_keys = list(model.state_dict().keys())
+        state_dict = OrderedDict(
+            (key, torch.tensor(value, dtype=torch.float32))
+            for key, value in zip(expected_keys, weights)
+        )
         outputs_probability = False
     else:
-        model = MustafaDiabetesNet(input_dim=len(feature_columns)).to(device)
-        outputs_probability = False
+        state_dict = torch.load(model_path, map_location=device)
+        if any(key.startswith("raw_monotonic_weights") for key in state_dict.keys()):
+            model = MonotonicMustafaDiabetesNet(
+                input_dim=len(feature_columns),
+                monotonic_feature_idx=monotonic_feature_idx,
+            ).to(device)
+            outputs_probability = False
+        else:
+            model = MustafaDiabetesNet(input_dim=len(feature_columns)).to(device)
+            outputs_probability = False
+
     model.load_state_dict(state_dict)
     model.eval()
     return {

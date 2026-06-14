@@ -38,6 +38,9 @@ services:
     command: sh -c "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"
     volumes:
       - ..:/app
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     ports:
       - "${WEB_PORT:-8000}:8000"
     env_file:
@@ -58,12 +61,15 @@ services:
       - ALLOWED_HOSTS=localhost,127.0.0.1,healthcheck-web,web,healthcheck-flower-server,flower-server,host.docker.internal,client1-web-1,client2-web-1
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - FLOWER_SERVER_ADDRESS=${FLOWER_SERVER_ADDRESS:-flower-server:8080}
-      - FLOWER_CONTROL_URL=${FLOWER_CONTROL_URL:-http://flower-server:8081}
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
+      - FLOWER_SERVER_ADDRESS=${FLOWER_SERVER_ADDRESS:-flower.vladar34.xyz:443}
+      - FLOWER_CONTROL_URL=${FLOWER_CONTROL_URL:-https://api.vladar34.xyz}
+      - FLOWER_INSECURE=${FLOWER_INSECURE:-false}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio.vladar34.xyz:443}
+      - MINIO_API_ENDPOINT=${MINIO_API_ENDPOINT:-34.51.199.32:30090}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
+      - MINIO_API_USE_SSL=${MINIO_API_USE_SSL:-false}
       - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-models}
     networks:
       - client_internal
@@ -76,6 +82,9 @@ services:
     command: celery -A healthcheck worker --loglevel=info
     volumes:
       - ..:/app
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     env_file:
       - ./.env
       - ../.env
@@ -93,12 +102,14 @@ services:
       - ALLOWED_HOSTS=localhost,127.0.0.1,healthcheck-web,web,healthcheck-flower-server,flower-server,host.docker.internal,client1-web-1,client2-web-1
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - FLOWER_SERVER_ADDRESS=${FLOWER_SERVER_ADDRESS:-flower-server:8080}
-      - FLOWER_CONTROL_URL=${FLOWER_CONTROL_URL:-http://flower-server:8081}
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
+      - FLOWER_SERVER_ADDRESS=${FLOWER_SERVER_ADDRESS:-flower.vladar34.xyz:443}
+      - FLOWER_CONTROL_URL=${FLOWER_CONTROL_URL:-https://api.vladar34.xyz}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio.vladar34.xyz:443}
+      - MINIO_API_ENDPOINT=${MINIO_API_ENDPOINT:-34.51.199.32:30090}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
+      - MINIO_API_USE_SSL=${MINIO_API_USE_SSL:-false}
       - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-models}
     networks:
       - client_internal
@@ -111,6 +122,9 @@ services:
     command: celery -A healthcheck beat --loglevel=info
     volumes:
       - ..:/app
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     env_file:
       - ./.env
       - ../.env
@@ -143,9 +157,12 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.ml
-    command: sh -c "python manage.py migrate --noinput && python manage.py listen_federated_training"
+    command: sh -c "python manage.py migrate --noinput && python manage.py listen_federated_training --control-url ${FLOWER_CONTROL_URL:-https://api.vladar34.xyz}"
     volumes:
       - ..:/app
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     ports:
       - "${FLOWER_CLIENT_PROMETHEUS_PORT:-8110}:${FLOWER_CLIENT_PROMETHEUS_PORT:-8110}"
     env_file:
@@ -165,15 +182,21 @@ services:
       - ALLOWED_HOSTS=localhost,127.0.0.1,healthcheck-web,web,healthcheck-flower-server,flower-server,host.docker.internal,client1-web-1,client2-web-1
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - FLOWER_SERVER_ADDRESS=${FLOWER_SERVER_ADDRESS:-flower-server:8080}
-      - FLOWER_CONTROL_URL=${FLOWER_CONTROL_URL:-http://flower-server:8081}
+      - FLOWER_SERVER_ADDRESS=${FLOWER_SERVER_ADDRESS:-flower.vladar34.xyz:443}
+      - FLOWER_CONTROL_URL=${FLOWER_CONTROL_URL:-https://api.vladar34.xyz}
       - FLOWER_MIN_SAMPLES=${FLOWER_MIN_SAMPLES:-1}
       - FEDERATED_SAMPLING_STRENGTH=${FEDERATED_SAMPLING_STRENGTH:-1.0}
       - FLOWER_CLIENT_PROMETHEUS_PORT=${FLOWER_CLIENT_PROMETHEUS_PORT:-8110}
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
+      - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
+      - PROMETHEUS_PUSH_INTERVAL_SECONDS=${PROMETHEUS_PUSH_INTERVAL_SECONDS:-15}
+      - PROMETHEUS_PUSH_JOB=${PROMETHEUS_PUSH_JOB:-healthcheck-clinic}
+      - FLOWER_INSECURE=${FLOWER_INSECURE:-false}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio.vladar34.xyz:443}
+      - MINIO_API_ENDPOINT=${MINIO_API_ENDPOINT:-34.51.199.32:30090}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
+      - MINIO_API_USE_SSL=${MINIO_API_USE_SSL:-false}
       - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-models}
     networks:
       - client_internal

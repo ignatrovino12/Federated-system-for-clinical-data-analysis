@@ -1,15 +1,14 @@
-- each client works only on one network
-- TLS - needs changes when in production  + k3s
+- each client to work only on one network ( can try to do after finishing thesis)
+- free space on docker 
 
-Optional:
-- make the server ( which is single point of failure) safer (second server or other ways)
+Optional: ( can include in future work )
+- make the server ( which is single point of failure) safer (second backup server or other ways)
 - weights - reverse attack - to make for a better security
 
 TODO THesis:
 - write conclusion + introduction for metrics chapter
-- change C2 diagrams font ( make it bigger ) - grpc not rpc, no nginx - use k3s ingress controller instead
-- write about kubernetes/cloudflare after site is deployed + deployment diagram
 - statistics for Systems/Efficiency Metrics 
+- statistics clinic with the whole database vs federated
 - bibliography -add django, django guardian docs etc
 
 

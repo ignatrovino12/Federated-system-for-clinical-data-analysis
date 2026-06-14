@@ -1,7 +1,6 @@
 import os
 import threading
 import logging
-import json
 from datetime import datetime, timezone
 
 from django.contrib import admin, messages
@@ -9,14 +8,7 @@ from django.core.management import call_command
 from django.http import HttpRequest, HttpResponseRedirect
 from django.urls import path, reverse
 
-try:
-	from minio import Minio
-	from minio.error import S3Error
-except ImportError:
-	Minio = None
-	S3Error = Exception
-
-from .federated_model_sync import get_local_federated_model_path
+from .federated_model_sync import get_local_federated_model_path, load_json_object
 from .models import PatientClinicalRecord
 
 logger = logging.getLogger(__name__)
@@ -43,35 +35,19 @@ class PatientClinicalRecordAdmin(admin.ModelAdmin):
 	ordering = ("-federated_train_count", "-last_federated_train_at", "-recorded_at")
 	change_list_template = "admin/clinical_ai/patientclinicalrecord/change_list.html"
 
-	def _minio_client(self):
-		if Minio is None:
-			logger.error(
-				"MinIO is not installed in this environment; model update notices and sync actions are disabled until the package is available."
-			)
-			return None
-		endpoint = os.getenv("MINIO_ENDPOINT", "minio:9000")
-		access_key = os.getenv("MINIO_ACCESS_KEY")
-		secret_key = os.getenv("MINIO_SECRET_KEY")
-		use_ssl = os.getenv("MINIO_USE_SSL", "false").lower() == "true"
-		if not access_key or not secret_key:
-			return None
-		return Minio(endpoint=endpoint, access_key=access_key, secret_key=secret_key, secure=use_ssl)
-
 	def _load_model_update_notice(self, model: str):
-		client = self._minio_client()
-		if client is None:
-			return None
-
 		bucket_name = os.getenv("MINIO_BUCKET_NAME", "models")
 		object_name = f"control/model-updates/{model}.json"
 		try:
-			response = client.get_object(bucket_name, object_name)
-			try:
-				payload = json.loads(response.read().decode("utf-8"))
-			finally:
-				response.close()
-				response.release_conn()
-		except S3Error:
+			payload = load_json_object(
+				bucket_name=bucket_name,
+				object_name=object_name,
+				endpoint=os.getenv("MINIO_API_ENDPOINT", os.getenv("MINIO_ENDPOINT", "minio:9000")),
+				access_key=os.getenv("MINIO_ACCESS_KEY"),
+				secret_key=os.getenv("MINIO_SECRET_KEY"),
+				use_ssl=os.getenv("MINIO_API_USE_SSL", os.getenv("MINIO_USE_SSL", "false")).lower() == "true",
+			)
+		except FileNotFoundError:
 			return None
 		except Exception:
 			logger.exception("Failed to load model update notice for %s", model)
@@ -146,9 +122,10 @@ class PatientClinicalRecordAdmin(admin.ModelAdmin):
 			self._background_command(
 				"sync_federated_model",
 				model=model,
-				endpoint=os.getenv("MINIO_ENDPOINT", "minio:9000"),
+				endpoint=os.getenv("MINIO_API_ENDPOINT", os.getenv("MINIO_ENDPOINT", "minio:9000")),
 				access_key=os.getenv("MINIO_ACCESS_KEY"),
 				secret_key=os.getenv("MINIO_SECRET_KEY"),
+				use_ssl=os.getenv("MINIO_API_USE_SSL", os.getenv("MINIO_USE_SSL", "false")).lower() == "true",
 			),
 		)
 		return HttpResponseRedirect(self._changelist_url())

@@ -72,5 +72,25 @@ coverage.xml
 # Documenation
 z.txt
 
+federated_server/flower_server/tls_secrets/
+
+# GCP service account key 
+federated_server/ar-puller-key.json
+ar-puller-key.json
+
+# k3s registry credentials
+federated_server/registries.yaml
+registries.yaml
+
+# TLS certificates and private keys
+federated_server/docker/nginx/certs/
+*.pem
+*.key
+*.crt
+
+# Clinic environment files (contain credentials)
+docker/client1.env
+docker/client2.env
+
 # reports
 reports/

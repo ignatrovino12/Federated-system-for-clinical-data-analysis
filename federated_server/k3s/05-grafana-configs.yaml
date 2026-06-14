@@ -1,0 +1,231 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-provisioning
+  namespace: healthcheck
+data:
+  datasource.yml: |
+    apiVersion: 1
+
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus:9090
+        isDefault: true
+        uid: PROMETHEUS
+  dashboard.yml: |
+    apiVersion: 1
+
+    providers:
+      - name: Healthcheck
+        orgId: 1
+        folder: Healthcheck
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 30
+        allowUiUpdates: true
+        options:
+          path: /var/lib/grafana/dashboards
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: healthcheck
+data:
+  healthcheck-monitoring.json: |
+    {
+      "uid": "healthcheck-monitoring",
+      "title": "Healthcheck Monitoring",
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "time": {
+        "from": "now-6h",
+        "to": "now"
+      },
+      "panels": [
+        {
+          "type": "timeseries",
+          "title": "Django request rate",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PROMETHEUS"
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(healthcheck_http_requests_total[5m])) by (clinic, view, method) or on() vector(0)"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Django p95 latency",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PROMETHEUS"
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.95, sum(rate(healthcheck_http_request_duration_seconds_bucket[5m])) by (le, clinic, view)) or on() vector(0)"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Clinical analysis requests",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PROMETHEUS"
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(increase(healthcheck_clinical_analysis_requests_total[1h])) by (model, mode, status) or on() vector(0)"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Flower round duration p95",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PROMETHEUS"
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.95, sum(increase(healthcheck_flower_round_duration_seconds_bucket[6h])) by (le, model)) or on() vector(0)"
+            }
+          ]
+        },
+        {
+          "type": "stat",
+          "title": "Flower current round",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PROMETHEUS"
+          },
+          "gridPos": {"h": 6, "w": 6, "x": 0, "y": 16},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max(max_over_time(healthcheck_flower_current_round[6h])) or on() vector(0)"
+            }
+          ]
+        },
+        {
+          "type": "stat",
+          "title": "Last checkpoint round",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PROMETHEUS"
+          },
+          "gridPos": {"h": 6, "w": 6, "x": 6, "y": 16},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max(max_over_time(healthcheck_flower_last_checkpoint_round[6h])) or on() vector(0)"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Clinic fit p95 latency",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PROMETHEUS"
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 22},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.95, sum(increase(healthcheck_client_fit_duration_seconds_bucket[1h])) by (le, clinic, model)) or on() vector(0)"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Clinic evaluate p95 latency",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PROMETHEUS"
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 22},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.95, sum(increase(healthcheck_client_evaluate_duration_seconds_bucket[1h])) by (le, clinic, model)) or on() vector(0)"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Clinic evaluation accuracy",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PROMETHEUS"
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 30},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max by (clinic, model) (healthcheck_client_evaluation_accuracy)"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Clinic training loss",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PROMETHEUS"
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 30},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max by (clinic, model) (healthcheck_client_training_loss)"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Client bytes sent rate",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PROMETHEUS"
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 38},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(increase(healthcheck_client_parameters_sent_bytes_total[1h])) by (clinic, model)"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Client bytes received rate",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PROMETHEUS"
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 38},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(increase(healthcheck_client_parameters_received_bytes_total[1h])) by (clinic, model)"
+            }
+          ]
+        }
+      ]
+    }

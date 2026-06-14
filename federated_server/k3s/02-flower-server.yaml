@@ -1,0 +1,123 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flower-server
+  namespace: healthcheck
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flower-server
+  template:
+    metadata:
+      labels:
+        app: flower-server
+    spec:
+      containers:
+        - name: flower-server
+          image: europe-north2-docker.pkg.dev/disertatie-federated-learning/healthcheck/flower-server:20260613-141420
+          imagePullPolicy: IfNotPresent
+          command:
+            - "sh"
+            - "-c"
+            - "while true; do python -u flower_server/server.py; echo 'flower-server cycle ended, restarting in 1s'; sleep 1; done"
+          volumeMounts:
+            - name: flower-tls
+              mountPath: /etc/flower/tls
+              readOnly: true
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: control
+              containerPort: 8081
+            - name: metrics
+              containerPort: 8001
+          env:
+            - name: FLOWER_HOST
+              value: "0.0.0.0"
+            - name: FLOWER_PORT
+              value: "8080"
+            - name: FLOWER_ROUNDS
+              value: "5"
+            - name: FLOWER_PROMETHEUS_PORT
+              value: "8001"
+            - name: FLOWER_CONTROL_PORT
+              value: "8081"
+            - name: FLOWER_MIN_FIT_CLIENTS
+              value: "1"
+            - name: FLOWER_MIN_EVALUATE_CLIENTS
+              value: "1"
+            - name: FLOWER_MIN_AVAILABLE_CLIENTS
+              value: "1"
+            - name: FLOWER_WEEKLY_SCHEDULER_ENABLED
+              value: "true"
+            - name: FLOWER_TRAINING_INTERVAL_SECONDS
+              value: "604800"
+            - name: FLOWER_MODEL_GAP_SECONDS
+              value: "120"
+            - name: FLOWER_SERVER_ADDRESS
+              value: "flower-server:8080"
+            - name: FLOWER_TRAINING_CONTROL_OBJECT
+              value: "control/training/latest.json"
+            - name: FLOWER_TLS_ENABLED
+              value: "true"
+            - name: FLOWER_TLS_CERTIFICATE
+              value: "/etc/flower/tls/tls.crt"
+            - name: FLOWER_TLS_PRIVATE_KEY
+              value: "/etc/flower/tls/tls.key"
+            - name: FLOWER_TLS_CA_CERTIFICATE
+              value: "/etc/flower/tls/tls.crt"
+            - name: FLOWER_TLS_COMMON_NAME
+              value: "flower.vladar34.xyz"
+            - name: MINIO_ENDPOINT
+              value: "minio:9000"
+            - name: MINIO_USE_SSL
+              value: "false"
+            
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: flower-secrets
+                  key: MINIO_ACCESS_KEY
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: flower-secrets
+                  key: MINIO_SECRET_KEY
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 40
+            periodSeconds: 20
+      volumes:
+        - name: flower-tls
+          secret:
+            secretName: tls-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flower-server
+  namespace: healthcheck
+spec:
+  type: NodePort
+  selector:
+    app: flower-server
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      nodePort: 30080
+    - name: control
+      port: 8081
+      targetPort: control
+      nodePort: 30081
+    - name: metrics
+      port: 8001
+      targetPort: metrics
+      nodePort: 30082

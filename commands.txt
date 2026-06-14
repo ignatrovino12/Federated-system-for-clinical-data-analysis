@@ -1,7 +1,7 @@
 
 sync changes  
-docker exec healthcheck-web python manage.py sync_federated_model --model alex5050 --endpoint minio:9000 --access-key minioadmin --secret-key minioadmin
-docker exec healthcheck-web python manage.py sync_federated_model --model mustafa --endpoint minio:9000 --access-key minioadmin --secret-key minioadmin
+docker exec healthcheck-web python manage.py sync_federated_model --model alex5050 --endpoint 34.51.199.32:30090 --access-key minioadmin --secret-key minioadmin
+docker exec healthcheck-web python manage.py sync_federated_model --model mustafa --endpoint 34.51.199.32:30090 --access-key minioadmin --secret-key minioadmin
 
 
 clear cache
@@ -9,8 +9,11 @@ docker exec healthcheck-web python manage.py clear_model_cache --model alex5050
 docker exec healthcheck-web python manage.py clear_model_cache
 
 start aggregation
-python flower_server/trigger_training.py --control-url http://localhost:8081 --model alex5050
-python flower_server/trigger_training.py --control-url http://localhost:8081 --model mustafa
+python flower_server/trigger_training.py --control-url https://api.vladar34.xyz --server-address flower.vladar34.xyz:443 --model alex5050
+python flower_server/trigger_training.py --control-url https://api.vladar34.xyz --server-address flower.vladar34.xyz:443 --model mustafa
+
+python flower_server/trigger_training.py --control-url https://api.vladar34.xyz --server-address flower.vladar34.xyz:443 --model mustafa
+
 
 
 translation
@@ -23,8 +26,8 @@ docker restart healthcheck-web
 
 
 multiple clients for testing
-docker compose --env-file client1.env -f docker-compose.client.yml -p client1 up -d
-docker compose --env-file client2.env -f docker-compose.client.yml -p client2 up -d
+docker compose --env-file docker/client1.env -f docker/docker-compose.client.yml -p client1 up -d
+docker compose --env-file docker/client2.env -f docker/docker-compose.client.yml -p client2 up -d
  docker compose -p flower up -d   
 
 metrics report
@@ -65,3 +68,8 @@ docker exec -it client2-web-1 python manage.py fit_model_calibration --model ale
 docker exec -it client2-web-1 python manage.py fit_model_calibration --model mustafa --method temperature
 
 
+Start stop gcloud vm instance
+gcloud compute instances start healthcheck-prod --zone=europe-north2-a
+
+TUNNEL ID
+ /home/ignat/.cloudflared/73d8154f-bd4d-4752-a78b-07ac8ce1e349.json. 

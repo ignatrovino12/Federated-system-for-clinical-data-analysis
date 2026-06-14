@@ -1,8 +1,7 @@
 # Federated Learning
 flwr==1.7.0
 
-# Machine Learning - PyTorch
-torch==2.7.0
+# Machine Learning
 numpy==1.26.4
 
 # Storage

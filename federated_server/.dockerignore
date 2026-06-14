@@ -1,0 +1,46 @@
+# Git and local metadata
+.git
+.gitignore
+.github
+
+# Python bytecode and caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.hypothesis/
+.coverage
+*.egg-info/
+
+# Local environments and editor files
+.venv/
+venv/
+.env
+.env.*
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Build and runtime artifacts
+logs/
+*.log
+celerybeat-schedule
+*.sqlite3
+*.db
+*.tar
+.docker_temp_*
+
+# Large or local-only assets that should not be baked into the image
+reports/
+machinelearning/
+*.ipynb
+TODO.md
+
+# Docker metadata from the source tree itself
+docker/
