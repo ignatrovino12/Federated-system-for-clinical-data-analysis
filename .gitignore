@@ -71,6 +71,8 @@ coverage.xml
 
 # Documenation
 z.txt
+commands.txt
+todo.txt
 
 federated_server/flower_server/tls_secrets/
 
@@ -87,6 +89,9 @@ federated_server/docker/nginx/certs/
 *.pem
 *.key
 *.crt
+
+# Large local docker temp artifacts
+federated_server/.docker_temp_*
 
 # Clinic environment files (contain credentials)
 docker/client1.env

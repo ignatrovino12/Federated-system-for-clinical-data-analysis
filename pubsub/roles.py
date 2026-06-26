@@ -4,6 +4,9 @@ from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 from django.db.utils import OperationalError, ProgrammingError
 
+from clinical_ai.models import PatientClinicalRecord
+from pubsub.models import Appointment, Patient
+
 
 ROLE_DISPLAY_NAMES = {
 	"admin": "Administrator",
@@ -82,9 +85,6 @@ def maybe_bootstrap_default_roles():
 
 
 def ensure_default_roles():
-	"""Create default role groups and attach baseline permissions."""
-	from clinical_ai.models import PatientClinicalRecord
-	from pubsub.models import Appointment, Patient
 
 	groups = {name: Group.objects.get_or_create(name=name)[0] for name in ("admin", "doctor", "receptionist")}
 

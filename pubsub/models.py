@@ -73,7 +73,6 @@ class Patient(models.Model):
         message=_('Enter a valid email address')
     )
     
-    # Primary key 
     id = models.AutoField(primary_key=True)
 
     # Ownership / assignment
@@ -133,6 +132,7 @@ class Patient(models.Model):
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
     # Pseudonym for safe lookup (HMAC of CNP)
     pseudonym = models.CharField(
         max_length=64,
@@ -208,7 +208,7 @@ class Patient(models.Model):
         return hmac.new(key, identifier.encode('utf-8'), hashlib.sha256).hexdigest()
 
     def save(self, *args, **kwargs):
-        # Ensure pseudonym exists and is deterministic from CNP
+        # ensure pseudonym exists and is deterministic from CNP
         try:
             if not self.pseudonym and self.CNP:
                 self.pseudonym = self._compute_pseudonym(self.CNP)

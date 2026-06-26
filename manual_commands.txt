@@ -1,0 +1,77 @@
+
+sync changes  
+docker exec healthcheck-web python manage.py sync_federated_model --model alex5050 --endpoint 34.51.199.32:30090 --access-key minioadmin --secret-key minioadmin
+docker exec healthcheck-web python manage.py sync_federated_model --model mustafa --endpoint 34.51.199.32:30090 --access-key minioadmin --secret-key minioadmin
+
+
+clear cache
+docker exec healthcheck-web python manage.py clear_model_cache --model alex5050
+docker exec healthcheck-web python manage.py clear_model_cache
+
+start aggregation
+python flower_server/trigger_training.py --control-url https://api.vladar34.xyz --server-address flower.vladar34.xyz:443 --model alex5050
+python flower_server/trigger_training.py --control-url https://api.vladar34.xyz --server-address flower.vladar34.xyz:443 --model mustafa
+
+python flower_server/trigger_training.py --control-url https://api.vladar34.xyz --server-address flower.vladar34.xyz:443 --model mustafa
+
+
+
+translation
+docker exec healthcheck-web python manage.py makemessages -l ro
+docker exec healthcheck-web python manage.py compilemessages
+
+docker exec healthcheck-web bash -lc "msgfmt -o /app/locale/ro/LC_MESSAGES/django.mo /app/locale/ro/LC_MESSAGES/django.po"
+docker exec healthcheck-web bash -lc "apt-get update && apt-get install -y gettext && rm -rf /var/lib/apt/lists/*"
+docker restart healthcheck-web
+
+
+multiple clients for testing
+docker compose --env-file docker/client1.env -f docker/docker-compose.client.yml -p client1 up -d
+docker compose --env-file docker/client2.env -f docker/docker-compose.client.yml -p client2 up -d
+ docker compose -p flower up -d   
+
+metrics report system efficiency
+docker compose --env-file client1.env -f docker-compose.client.yml -p client1 exec -T web python manage.py generate_system_efficiency_report --prometheus-url http://34.51.199.32:30990 --window 24h --clinic clinic1 --clinic clinic2 --output reports/system_efficiency/system_efficiency_report.json
+
+core model
+docker compose --env-file client1.env -f docker-compose.client.yml -p client1 exec -T web python manage.py compute_core_model_quality --model alex5050 --bootstrap-samples 1000 --test-size 0.2 --seed 42
+docker compose --env-file client1.env -f docker-compose.client.yml -p client1 exec -T web python manage.py compute_core_model_quality --model mustafa --bootstrap-samples 1000 --test-size 0.2 --seed 42
+
+docker compose --env-file client2.env -f docker-compose.client.yml -p client2 exec -T web python manage.py compute_core_model_quality --model alex5050 --bootstrap-samples 1000 --test-size 0.2 --seed 42
+docker compose --env-file client2.env -f docker-compose.client.yml -p client2 exec -T web python manage.py compute_core_model_quality --model mustafa --bootstrap-samples 1000 --test-size 0.2 --seed 42
+
+clinical utility
+docker compose --env-file client1.env -f docker-compose.client.yml -p client1 exec -T web python manage.py compute_decision_curve_from_reports --report mustafa.json --out-dir reports/figures --bootstrap 1000 --seed 42
+
+statistical validation 
+
+foreach ($seed in 1..5) {
+  docker compose --env-file client1.env -f docker-compose.client.yml -p client1 exec -T web python manage.py compute_core_model_quality --model mustafa --seed $seed --bootstrap-samples 1000 --test-size 0.2 --save-predictions --output reports/model_quality/mustafa_seed$seed.json
+}
+
+docker compose --env-file client1.env -f docker-compose.client.yml -p client1 exec -T web python manage.py summarize_statistical_validation --baseline-report reports/model_quality/mustafa_seed1.json --baseline-report reports/model_quality/mustafa_seed2.json --baseline-report reports/model_quality/mustafa_seed3.json --baseline-report reports/model_quality/mustafa_seed4.json --baseline-report reports/model_quality/mustafa_seed5.json --output reports/model_quality/stat_validation_mustafa.json
+
+Access control rbac + django guardian
+python manage.py migrate
+python manage.py bootstrap_roles
+
+
+Test HMAC
+docker exec -it client1-web-1 python manage.py shell -c "from pubsub.models import Patient; p=Patient.objects.get(id=300); print(p.CNP, p.pseudonym)"
+
+Calibration
+docker exec -it client2-web-1 python manage.py fit_model_calibration --model alex5050
+docker exec -it client2-web-1 python manage.py fit_model_calibration --model mustafa
+
+docker exec -it client1-web-1 python manage.py fit_model_calibration --model alex5050 --method temperature
+docker exec -it client1-web-1 python manage.py fit_model_calibration --model mustafa --method temperature
+docker exec -it client2-web-1 python manage.py fit_model_calibration --model alex5050 --method temperature
+docker exec -it client2-web-1 python manage.py fit_model_calibration --model mustafa --method temperature
+
+
+Start stop gcloud vm instance
+gcloud compute instances start healthcheck-prod --zone=europe-north2-a
+
+
+Clear pushgateway 
+kubectl -n healthcheck rollout restart deployment/pushgateway

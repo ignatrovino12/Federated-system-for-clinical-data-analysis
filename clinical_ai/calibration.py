@@ -192,7 +192,7 @@ def _decision_threshold_for_recall(y_true: np.ndarray, probabilities: np.ndarray
     if best_recall_gap < float("inf"):
         return best_threshold
 
-    # Fallback: choose the threshold with the best recall, preferring specificity.
+    # Fallback - choose the threshold with the best recall, preferring specificity.
     best_threshold = 0.5
     best_recall = -1.0
     best_specificity = -1.0
@@ -232,9 +232,8 @@ def fit_temperature_bias_calibration(
         return identity_state(source_model=source_model, calibration_size=calibration_size)
 
     # Two-stage calibration:
-    # 1) Fit temperature to preserve the slope behaviour.
-    # 2) Fit only the intercept in a narrow band near zero so the baseline shift
-    #    is corrected without letting the slope move again.
+    # 1) Fit temperature to preserve the slope behaviour
+    # 2) Fit only the intercept in a narrow band near zero so the baseline shift is corrected without letting the slope move again.
     temperature_state = fit_temperature_calibration(
         labels,
         scores,

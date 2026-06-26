@@ -1,4 +1,3 @@
-"""Security helpers for pseudonymization and field encryption."""
 from django.conf import settings
 import hmac
 import hashlib

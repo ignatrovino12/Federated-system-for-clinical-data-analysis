@@ -5,9 +5,8 @@ from django.utils.translation import gettext_lazy as _
 
 
 class PatientForm(forms.ModelForm):
-    """Form for adding/editing patients"""
-    
-    # Validators for Romanian identity documents
+
+    # Validators for identity documents
     cnp_validator = RegexValidator(
         regex=r'^\d{13}$',
         message='CNP-ul trebuie să aibă exact 13 cifre'

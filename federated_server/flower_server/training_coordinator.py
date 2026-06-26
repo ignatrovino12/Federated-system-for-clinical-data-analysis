@@ -1,10 +1,3 @@
-"""Server-side control plane for starting federated training rounds.
-
-The Flower server remains the aggregation engine. This module only
-manages the request to start a round, persists it in MinIO, and exposes
-a small HTTP control API for manual triggers and client polling.
-"""
-
 from __future__ import annotations
 
 import io
@@ -74,7 +67,6 @@ class TrainingRequest:
 
 
 class TrainingCoordinator:
-    """Stores and publishes federated training requests."""
 
     def __init__(self, minio_client: Optional[Minio], bucket_name: str = "models") -> None:
         self.minio_client = minio_client

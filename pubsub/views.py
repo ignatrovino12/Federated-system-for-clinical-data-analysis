@@ -17,10 +17,9 @@ from .forms import PatientForm
 from .redis_pubsub import AppointmentNotifier
 from .appointment_lifecycle import expire_completed_appointments
 
-# Optional import for object permissions (django-guardian)
 try:
     assign_perm = importlib.import_module("guardian.shortcuts").assign_perm
-except Exception:  # pragma: no cover - guardian may not be installed yet
+except Exception: 
     def assign_perm(perm, user, obj=None):
         return None
 
@@ -28,7 +27,6 @@ except Exception:  # pragma: no cover - guardian may not be installed yet
 # UTILITY FUNCTIONS
 
 def get_client_ip(request):
-    """Get client IP address from request"""
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
         ip = x_forwarded_for.split(',')[0]
@@ -38,7 +36,6 @@ def get_client_ip(request):
 
 
 def log_access(user, patient, action, request, details=""):
-    """Create an access log entry"""
     AccessLog.objects.create(
         user=user,
         patient=patient,
@@ -49,12 +46,10 @@ def log_access(user, patient, action, request, details=""):
 
 
 def get_user_profile(user):
-    """Return role metadata derived from auth groups."""
     return get_role_info(user)
 
 
 def get_unread_appointments_count(user):
-    """Get count of unread appointments for doctors"""
     # Count unread appointments where the user is the doctor (works regardless of role flags)
     return Appointment.objects.filter(doctor=user, notification_read=False).count()
 
@@ -67,19 +62,15 @@ def doctor_has_patient_access(patient, doctor):
 
 
 def is_doctor_like(user):
-    """Heuristic: user is a doctor if they are assigned as doctor for any patient
-    or they are the doctor on any appointment. This preserves behavior without
-    relying on string role checks and works alongside permissions/groups."""
     return Patient.objects.filter(assigned_doctor=user).exists() or Appointment.objects.filter(doctor=user).exists()
 
 
 def is_group_doctor(user):
-    """Detect doctor by group membership"""
     return is_in_group(user, 'doctor')
 
 
 def role_required(allowed_roles):
-    """Decorator to check if user has required role"""
+    # Decorator to check if user has required role
     def decorator(view_func):
         @wraps(view_func)
         def wrapper(request, *args, **kwargs):
@@ -93,11 +84,9 @@ def role_required(allowed_roles):
 
 
 def permission_required_or_role(perm, allowed_roles=None, obj_getter=None):
-    """Decorator: allow when user has `perm` (model or object) or when user's role is in allowed_roles.
+    # Decorator to allow when user has `perm` (model or object) or when user's role is in allowed_roles.
 
-    - `perm` is the permission string, e.g. 'pubsub.change_patient'
-    - `obj_getter` is an optional callable(request, *args, **kwargs) -> object used for object-perm checks
-    """
+
     def decorator(view_func):
         @wraps(view_func)
         def wrapper(request, *args, **kwargs):
@@ -133,7 +122,7 @@ def permission_required_or_role(perm, allowed_roles=None, obj_getter=None):
 # AUTHENTICATION AND DASHBOARD VIEWS
 
 def login_view(request):
-    """Login view for clinic personnel"""
+  
     if request.user.is_authenticated:
         return redirect('pubsub:dashboard')
     
@@ -155,7 +144,7 @@ def login_view(request):
 
 
 def logout_view(request):
-    """Logout view for clinic personnel"""
+   
     logout(request)
     messages.info(request, 'You have been logged out successfully.')
     return redirect('pubsub:login')
@@ -163,7 +152,7 @@ def logout_view(request):
 
 @login_required
 def dashboard_view(request):
-    """Dashboard view for authenticated clinic personnel"""
+ 
     from .models import Patient
     
     profile = get_user_profile(request.user)
@@ -195,7 +184,7 @@ def dashboard_view(request):
 
 @login_required
 def profile_view(request):
-    """Profile view for clinic personnel"""
+
     profile = get_user_profile(request.user)
     
     # Get user's recent access logs
@@ -214,7 +203,7 @@ def profile_view(request):
 
 @login_required
 def patient_list_view(request):
-    """List patients with role-aware visibility and search behavior"""
+    
     profile = get_user_profile(request.user)
     min_search_length = 3
 
@@ -223,7 +212,7 @@ def patient_list_view(request):
     search_too_short = bool(search_query) and len(search_query) < min_search_length
 
     if is_doctor_like(request.user):
-        # Doctors should see patients assigned to them or linked through appointments.
+        # Doctors should see patients assigned to them or linked through appointments
         patients = Patient.objects.none()
         if search_query and not search_too_short:
             log_access(request.user, None, 'search', request, details=f"Searched: {search_query}")
@@ -250,7 +239,7 @@ def patient_list_view(request):
             )
         total_patients = patients.count()
     else:
-        # Receptionists/admins keep the existing search-first workflow.
+        # Receptionists/admins keep the existing search-first workflow
         if search_query and not search_too_short:
             log_access(request.user, None, 'search', request, details=f"Searched: {search_query}")
             patients = Patient.objects.filter(
@@ -282,11 +271,11 @@ def patient_list_view(request):
     obj_getter=lambda request, *a, **kw: get_object_or_404(Patient, id=kw.get('patient_id')),
 )
 def patient_detail_view(request, patient_id):
-    """View full patient details with audit logging"""
+    
     patient = get_object_or_404(Patient, id=patient_id)
     profile = get_user_profile(request.user)
     
-    # Doctors can only view patients they have appointments with (preserve existing business rule)
+    # Doctors can only view patients they have appointments with
     if is_doctor_like(request.user):
         if not doctor_has_patient_access(patient, request.user):
             messages.error(request, 'You do not have permission to view this patient. You can only view patients assigned to you or with whom you have appointments.')
@@ -313,7 +302,7 @@ def patient_detail_view(request, patient_id):
 @login_required
 @permission_required_or_role('pubsub.add_patient', allowed_roles=['admin', 'doctor', 'receptionist'])
 def patient_add_view(request):
-    """Add a new patient"""
+    
     profile = get_user_profile(request.user)
     
     if request.method == 'POST':
@@ -325,7 +314,7 @@ def patient_add_view(request):
             else:
                 patient.assigned_doctor = None
             patient.save()
-            # Grant object-level permissions to assigned doctor (if guardian installed)
+            # Grant object-level permissions to assigned doctor
             if patient.assigned_doctor_id is not None:
                 try:
                     assign_perm('view_patient', patient.assigned_doctor, patient)
@@ -363,7 +352,7 @@ def patient_add_view(request):
     obj_getter=lambda request, *a, **kw: get_object_or_404(Patient, id=kw.get('patient_id')),
 )
 def patient_edit_view(request, patient_id):
-    """Edit an existing patient (doctors and admins only)"""
+
     patient = get_object_or_404(Patient, id=patient_id)
     profile = get_user_profile(request.user)
     
@@ -397,7 +386,7 @@ def patient_edit_view(request, patient_id):
 @login_required
 @permission_required_or_role('pubsub.delete_patient', allowed_roles=['admin'])
 def patient_delete_view(request, patient_id):
-    """Delete a patient (admins only)"""
+  
     patient = get_object_or_404(Patient, id=patient_id)
     profile = get_user_profile(request.user)
     
@@ -423,7 +412,7 @@ def patient_delete_view(request, patient_id):
 @login_required
 @permission_required_or_role('pubsub.view_appointment', allowed_roles=['admin', 'doctor', 'receptionist'])
 def appointment_list_view(request):
-    """View all appointments with filtering"""
+
     profile = get_user_profile(request.user)
     expire_completed_appointments()
     
@@ -437,7 +426,6 @@ def appointment_list_view(request):
     
     # Apply filters
     status_filter = request.GET.get('status', '')
-    # Date range comes from "From Date" / "To Date" inputs in the template
     date_from = request.GET.get('date_from', '')
     date_to = request.GET.get('date_to', '')
     
@@ -482,7 +470,7 @@ def appointment_list_view(request):
 @login_required
 @permission_required_or_role('pubsub.add_appointment', allowed_roles=['admin', 'receptionist', 'doctor'])
 def appointment_create_view(request):
-    """Create a new appointment"""
+    
     profile = get_user_profile(request.user)
     
     if request.method == 'POST':
@@ -541,7 +529,7 @@ def appointment_create_view(request):
                 except Exception:
                     pass
             
-            # Send Redis notification when appointment is created, but only if doctor is different from creator.
+            # Send Redis notification when appointment is created, but only if doctor is different from creator
             if appointment.created_by_id == appointment.doctor_id:
                 appointment.notification_sent = True
                 appointment.notification_read = True
@@ -605,7 +593,7 @@ def appointment_create_view(request):
 @login_required
 @role_required(['admin', 'doctor', 'receptionist'])
 def appointment_detail_view(request, appointment_id):
-    """View appointment details"""
+
     expire_completed_appointments()
     appointment = get_object_or_404(Appointment, id=appointment_id)
     profile = get_user_profile(request.user)
@@ -641,12 +629,12 @@ def appointment_detail_view(request, appointment_id):
     obj_getter=lambda request, *a, **kw: get_object_or_404(Appointment, id=kw.get('appointment_id')),
 )
 def appointment_update_status_view(request, appointment_id):
-    """Update appointment status"""
+
     expire_completed_appointments()
     appointment = get_object_or_404(Appointment, id=appointment_id)
     profile = get_user_profile(request.user)
     
-    # Check permissions: preserve doctor business rule using doctor-like heuristic
+    # Check permissions - preserve doctor business rule using doctor-like heuristic
     if is_doctor_like(request.user) and appointment.doctor != request.user:
         messages.error(request, 'You do not have permission to modify this appointment.')
         return redirect('pubsub:appointment_list')
@@ -691,7 +679,7 @@ def appointment_update_status_view(request, appointment_id):
 @login_required
 @permission_required_or_role('pubsub.delete_appointment', allowed_roles=['admin', 'doctor'])
 def appointment_delete_view(request, appointment_id):
-    """Delete completed, expired, cancelled or no-show appointments"""
+
     expire_completed_appointments()
     appointment = get_object_or_404(Appointment, id=appointment_id)
     profile = get_user_profile(request.user)
@@ -724,7 +712,7 @@ def appointment_delete_view(request, appointment_id):
 
 @login_required
 def appointment_search_patients_ajax(request):
-    """AJAX endpoint for searching patients during appointment creation"""
+  
     query = request.GET.get('q', '')
     
     if len(query) < 2:

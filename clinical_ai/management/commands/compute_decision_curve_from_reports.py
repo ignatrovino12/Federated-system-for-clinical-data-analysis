@@ -1,12 +1,3 @@
-#!/usr/bin/env python3
-"""Compute decision-curve (net benefit) from a report JSON that contains per-sample predictions.
-
-Usage (inside container):
-  python scripts/compute_decision_curve_from_reports.py --report reports/model_quality/base_core_quality_mustafa.json --out-dir reports/figures --bootstrap 1000
-
-The script expects the JSON to contain either `y_true` and `y_pred` (probabilities) fields or `labels` and `scores`.
-If such per-sample fields are missing the script will exit with an explanatory message.
-"""
 import argparse
 import json
 import os
@@ -38,7 +29,7 @@ def extract_examples(report):
             y = np.array([e['y'] for e in report['examples']])
             p = np.array([e['p'] for e in report['examples']])
             return y, p
-    # Newer reports may include a `per_sample` block with predictions
+
     if 'per_sample' in report and isinstance(report['per_sample'], dict):
         per = report['per_sample']
         # prefer calibrated if available

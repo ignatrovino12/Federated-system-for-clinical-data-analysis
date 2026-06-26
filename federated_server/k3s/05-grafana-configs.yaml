@@ -49,7 +49,7 @@ data:
       "panels": [
         {
           "type": "timeseries",
-          "title": "Django request rate",
+          "title": "Clinic request rate",
           "datasource": {
             "type": "prometheus",
             "uid": "PROMETHEUS"
@@ -58,13 +58,13 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "sum(rate(healthcheck_http_requests_total[5m])) by (clinic, view, method) or on() vector(0)"
+              "expr": "sum by (clinic) (rate(healthcheck_http_requests_total[5m])) or on() vector(0)"
             }
           ]
         },
         {
           "type": "timeseries",
-          "title": "Django p95 latency",
+          "title": "Clinic average latency",
           "datasource": {
             "type": "prometheus",
             "uid": "PROMETHEUS"
@@ -73,13 +73,13 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "histogram_quantile(0.95, sum(rate(healthcheck_http_request_duration_seconds_bucket[5m])) by (le, clinic, view)) or on() vector(0)"
+              "expr": "sum by (clinic) (healthcheck_http_request_duration_seconds_sum) / clamp_min(sum by (clinic) (healthcheck_http_request_duration_seconds_count), 1e-9)"
             }
           ]
         },
         {
           "type": "timeseries",
-          "title": "Clinical analysis requests",
+          "title": "Clinical AI analysis requests",
           "datasource": {
             "type": "prometheus",
             "uid": "PROMETHEUS"
@@ -88,13 +88,13 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "sum(increase(healthcheck_clinical_analysis_requests_total[1h])) by (model, mode, status) or on() vector(0)"
+              "expr": "sum by (clinic, model, mode, status) (increase(healthcheck_clinical_analysis_requests_total[1h])) or on() vector(0)"
             }
           ]
         },
         {
           "type": "timeseries",
-          "title": "Flower round duration p95",
+          "title": "Flower round average duration",
           "datasource": {
             "type": "prometheus",
             "uid": "PROMETHEUS"
@@ -103,7 +103,7 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "histogram_quantile(0.95, sum(increase(healthcheck_flower_round_duration_seconds_bucket[6h])) by (le, model)) or on() vector(0)"
+              "expr": "sum by (model) (healthcheck_flower_round_duration_seconds_sum) / clamp_min(sum by (model) (healthcheck_flower_round_duration_seconds_count), 1e-9)"
             }
           ]
         },
@@ -139,7 +139,7 @@ data:
         },
         {
           "type": "timeseries",
-          "title": "Clinic fit p95 latency",
+          "title": "Clinic fit average latency",
           "datasource": {
             "type": "prometheus",
             "uid": "PROMETHEUS"
@@ -148,13 +148,13 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "histogram_quantile(0.95, sum(increase(healthcheck_client_fit_duration_seconds_bucket[1h])) by (le, clinic, model)) or on() vector(0)"
+              "expr": "sum by (clinic, model) (healthcheck_client_fit_duration_seconds_sum) / clamp_min(sum by (clinic, model) (healthcheck_client_fit_duration_seconds_count), 1e-9)"
             }
           ]
         },
         {
           "type": "timeseries",
-          "title": "Clinic evaluate p95 latency",
+          "title": "Clinic evaluate average latency",
           "datasource": {
             "type": "prometheus",
             "uid": "PROMETHEUS"
@@ -163,7 +163,7 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "histogram_quantile(0.95, sum(increase(healthcheck_client_evaluate_duration_seconds_bucket[1h])) by (le, clinic, model)) or on() vector(0)"
+              "expr": "sum by (clinic, model) (healthcheck_client_evaluate_duration_seconds_sum) / clamp_min(sum by (clinic, model) (healthcheck_client_evaluate_duration_seconds_count), 1e-9)"
             }
           ]
         },

@@ -14,16 +14,12 @@ redis_client = redis.Redis(
 
 
 class AppointmentNotifier:
-    """Handle Redis pub/sub for appointment notifications"""
+    # Handle Redis pub/sub for appointment notifications
     
     CHANNEL_PREFIX = 'appointment'
     
     @staticmethod
     def publish_appointment_created(appointment):
-        """
-        Publish notification when a new appointment is created
-        
-        """
         channel = f"{AppointmentNotifier.CHANNEL_PREFIX}:doctor:{appointment.doctor.id}"
         
         message = {
@@ -55,10 +51,7 @@ class AppointmentNotifier:
     
     @staticmethod
     def publish_appointment_updated(appointment, action='updated'):
-        """
-        Publish notification when appointment is updated or cancelled
-        Action type (updated, cancelled, confirmed)
-        """
+
         channel = f"{AppointmentNotifier.CHANNEL_PREFIX}:doctor:{appointment.doctor.id}"
         
         message = {
@@ -80,9 +73,7 @@ class AppointmentNotifier:
     
     @staticmethod
     def subscribe_to_doctor_appointments(doctor_id, callback):
-        """
-        Subscribe to appointment notifications for a specific doctor
-        """
+
         channel = f"{AppointmentNotifier.CHANNEL_PREFIX}:doctor:{doctor_id}"
         pubsub = redis_client.pubsub()
         
@@ -101,10 +92,7 @@ class AppointmentNotifier:
     
     @staticmethod
     def get_unread_count(doctor_id):
-        """
-        Get count of unread appointment notifications for a doctor
 
-        """
         from .models import Appointment
         return Appointment.objects.filter(
             doctor_id=doctor_id,
@@ -114,10 +102,7 @@ class AppointmentNotifier:
     
     @staticmethod
     def mark_as_read(appointment_id):
-        """
-        Mark appointment notification as read
         
-        """
         from .models import Appointment
         try:
             appointment = Appointment.objects.get(id=appointment_id)
@@ -129,16 +114,13 @@ class AppointmentNotifier:
 
 
 class ClinicBroadcaster:
-    """Broadcast system-wide messages to all clinic staff"""
+    # Broadcast system-wide messages to all clinic staff
     
     CHANNEL = 'clinic:broadcast'
     
     @staticmethod
     def broadcast_message(message_type, data):
-        """
-        Broadcast a message to all clinic staff
-        
-        """
+
         message = {
             'type': message_type,
             'data': data,

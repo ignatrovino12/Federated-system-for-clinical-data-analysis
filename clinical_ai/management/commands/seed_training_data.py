@@ -50,8 +50,8 @@ def _sigmoid(value: float) -> float:
 
 
 def _sample_diabetes_status(rng: random.Random, risk_score: int) -> str:
-	"""Convert a risk score into a noisy label so synthetic data is not perfectly separable."""
-	# Add a little uncertainty so the same risk profile is not always labeled identically.
+	# Convert a risk score into a noisy label so synthetic data is not perfectly separable
+	# Add a little uncertainty so the same risk profile is not always labeled identically
 	noisy_score = risk_score + rng.gauss(0.0, 1.35)
 
 	if noisy_score <= 2:
@@ -77,7 +77,7 @@ def _sample_diabetes_status(rng: random.Random, risk_score: int) -> str:
 
 
 def _build_synthetic_profile(rng: random.Random):
-	"""Build one coherent synthetic clinical profile for both models."""
+	# Build one coherent synthetic clinical profile for both models
 	risk_band = rng.choices(["low", "moderate", "high"], weights=[0.45, 0.35, 0.20], k=1)[0]
 
 	if risk_band == "low":

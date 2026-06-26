@@ -1,9 +1,3 @@
-"""
-Federated client implementation for Django clinic instances.
-This module lives in the main Django app so clinic deployments can train locally
-and send updated weights to the central Flower server.
-"""
-
 import logging
 import os
 from collections import OrderedDict
@@ -226,7 +220,7 @@ class FederatedClient(fl.client.NumPyClient):
         )
 
     def _refresh_training_weights(self) -> None:
-        """Recompute local sample weights from persisted federated_train_count values."""
+        #Recompute local sample weights from persisted federated_train_count values.
         if not self.training_record_ids:
             return
         if len(self.training_record_ids) != len(self.train_loader.dataset):
@@ -247,9 +241,8 @@ class FederatedClient(fl.client.NumPyClient):
                 )
             }
 
-            # Compute rank-based weights so the lowest federated_train_count records
-            # receive higher sampling probability, but compress the dynamic range
-            # to avoid a tiny set of records dominating selection forever.
+            # Compute rank-based weights so the lowest federated_train_count records receive higher sampling probability,
+            # but compress the dynamic range to avoid a tiny set of records dominating selection forever
             counts = np.asarray([float(id_to_count.get(rid, 0)) for rid in self.training_record_ids], dtype=np.float32)
             order = np.argsort(counts)  # indices of records sorted by count (ascending)
             ranks = np.empty_like(order)
@@ -261,14 +254,12 @@ class FederatedClient(fl.client.NumPyClient):
                 norm = (ranks - ranks.min()) / (ranks.max() - ranks.min())
             else:
                 norm = np.ones_like(ranks, dtype=np.float32)
-            base = min_val + (1.0 - min_val) * norm  # in [min_val, 1.0]
+            base = min_val + (1.0 - min_val) * norm  
 
-            # Apply a modest exponent to increase preference; scale exponent so
-            # it doesn't explode for large `sampling_strength` values.
+            # Apply a modest exponent to increase preference; scale exponent so it doesn't explode for large sampling_strength values.
             power = 1.0 + float(self.sampling_strength) * 0.5
             refreshed_weights = (base ** power).astype(np.float32)
 
-            # Debug logging: counts summary and a few top weights to diagnose issues.
             try:
                 unique_counts = np.unique(counts)
                 top_idx = np.argsort(-refreshed_weights)[:5]
@@ -385,7 +376,7 @@ def create_client(
     else:
         raise ValueError(f"Unknown model type: {model_type}")
 
-    # Try to load the latest saved model from disk; if not found, use freshly initialized model
+    # load latest if available, otherwise use fresh model
     from clinical_ai.federated_model_sync import get_local_federated_model_path
     local_model_path = get_local_federated_model_path(model_type)
     if local_model_path.exists():
@@ -430,7 +421,7 @@ def create_client(
     )
     test_dataset = TensorDataset(torch.from_numpy(test_x).float(), torch.from_numpy(test_y).float())
 
-    # Use each training sample once per epoch and downweight patients that have already been trained many times.
+    # Use each training sample once per epoch and downweight patients that have already been trained many times
     train_sampler_weights = np.clip(train_weights, 1e-6, None).astype(np.float64)
     num_samples = max(1, int(round(len(train_sampler_weights) * max(0.1, min(1.0, float(training_sample_fraction))))))
     train_sampler = WeightedRandomSampler(

@@ -1,5 +1,3 @@
-"""Manual terminal helper that triggers a federated training request."""
-
 from __future__ import annotations
 
 import argparse

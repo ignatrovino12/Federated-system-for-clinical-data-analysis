@@ -28,7 +28,7 @@ def _training_sample_fraction() -> float:
 
 
 def _explicit_diabetes_label(record: PatientClinicalRecord) -> Optional[float]:
-    """Use explicit diagnosis status as federated target label."""
+    # Use explicit diagnosis status as federated target label
     if record.diabetes_status == PatientClinicalRecord.DiabetesStatus.HAS:
         return 1.0
     if record.diabetes_status == PatientClinicalRecord.DiabetesStatus.HAS_NOT:
@@ -50,7 +50,7 @@ def _build_feature_row(record: PatientClinicalRecord, model_type: str) -> Option
 
 
 def _training_sample_weight(record: PatientClinicalRecord) -> float:
-    """Downweight frequently used records; strength controls how aggressively."""
+    # Downweight frequently used records; strength controls how aggressively.
     count = float(record.federated_train_count or 0)
     strength = _sampling_strength()
     return 1.0 / ((1.0 + count) ** strength)
@@ -283,7 +283,7 @@ class Command(BaseCommand):
         except Exception:
             pass
 
-        # Shuffle the dataset before splitting into train/test so the training split isn't deterministically biased by database id ordering.
+        # Shuffle the dataset before splitting into train/test so the training split isn't deterministically biased by database id ordering
         if len(x) > 1:
             perm = np.random.RandomState(seed=None).permutation(len(x))
             x = x[perm]

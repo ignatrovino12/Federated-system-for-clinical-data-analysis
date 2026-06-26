@@ -1,10 +1,3 @@
-"""Flower Server for Federated Learning.
-
-This module runs the Flower aggregation server, persists the final
-aggregated checkpoint to MinIO, and exposes the small control API used
-by the clinic containers.
-"""
-
 from __future__ import annotations
 
 import io
@@ -55,7 +48,6 @@ logger = logging.getLogger("flower-server")
 
 
 def _resolve_port() -> int:
-    """Resolve Flower port from env while tolerating Kubernetes service URL vars."""
     candidates = [
         os.getenv("FLOWER_PORT"),
         os.getenv("FLOWER_SERVER_PORT"),

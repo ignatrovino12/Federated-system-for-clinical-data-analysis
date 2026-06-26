@@ -1,29 +1,42 @@
-from prometheus_client import Counter, Gauge, Histogram
+import logging
+import os
+
+import threading
+import time
+
+from prometheus_client import REGISTRY, Counter, Gauge, Histogram, push_to_gateway
+
+
+logger = logging.getLogger(__name__)
+
+
+def _clinic_label() -> str:
+    return os.getenv("CLINIC_ID", os.getenv("HOSTNAME", "central"))
 
 
 HTTP_REQUESTS_TOTAL = Counter(
     "healthcheck_http_requests_total",
     "Total Django HTTP requests processed by view and status code.",
-    ["app", "view", "method", "status"],
+    ["clinic", "app", "view", "method", "status"],
 )
 
 HTTP_REQUEST_DURATION_SECONDS = Histogram(
     "healthcheck_http_request_duration_seconds",
     "Django request latency by view and method.",
-    ["app", "view", "method"],
+    ["clinic", "app", "view", "method"],
     buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10),
 )
 
 HTTP_REQUEST_EXCEPTIONS_TOTAL = Counter(
     "healthcheck_http_request_exceptions_total",
     "Unhandled Django request exceptions by view and exception type.",
-    ["app", "view", "exception"],
+    ["clinic", "app", "view", "exception"],
 )
 
 CLINICAL_ANALYSIS_REQUESTS_TOTAL = Counter(
     "healthcheck_clinical_analysis_requests_total",
     "Clinical AI analysis requests by model, mode, and outcome.",
-    ["model", "mode", "status"],
+    ["clinic", "model", "mode", "status"],
 )
 
 FLOWER_ROUNDS_TOTAL = Counter(
@@ -141,8 +154,14 @@ CLIENT_EVALUATION_ACCURACY = Gauge(
 )
 
 
+_pushgateway_started = False
+_pushgateway_lock = threading.Lock()
+
+
 def record_http_request(view_name: str, method: str, status_code: int, duration_seconds: float) -> None:
+    clinic = _clinic_label()
     labels = {
+        "clinic": clinic,
         "app": "django",
         "view": view_name or "unknown",
         "method": method,
@@ -150,14 +169,18 @@ def record_http_request(view_name: str, method: str, status_code: int, duration_
     }
     HTTP_REQUESTS_TOTAL.labels(**labels).inc()
     HTTP_REQUEST_DURATION_SECONDS.labels(
+        clinic=labels["clinic"],
         app=labels["app"],
         view=labels["view"],
         method=labels["method"],
     ).observe(duration_seconds)
+    push_metrics_to_gateway()
 
 
 def record_http_exception(view_name: str, method: str, exception_name: str) -> None:
+    clinic = _clinic_label()
     HTTP_REQUEST_EXCEPTIONS_TOTAL.labels(
+        clinic=clinic,
         app="django",
         view=view_name or "unknown",
         exception=exception_name or "Exception",
@@ -165,11 +188,70 @@ def record_http_exception(view_name: str, method: str, exception_name: str) -> N
 
 
 def record_analysis_request(model: str, mode: str, status: str) -> None:
+    clinic = _clinic_label()
     CLINICAL_ANALYSIS_REQUESTS_TOTAL.labels(
+        clinic=clinic,
         model=model,
         mode=mode,
         status=status,
     ).inc()
+    push_metrics_to_gateway()
+
+
+def push_metrics_to_gateway() -> None:
+    # Push the current process registry to Pushgateway when web pushing is enabled
+
+    pushgateway_url = os.getenv("PROMETHEUS_PUSHGATEWAY_URL", "").strip()
+    if not pushgateway_url:
+        return
+
+    if os.getenv("PROMETHEUS_ENABLE_PUSH", "0").strip().lower() not in {"1", "true", "yes", "on"}:
+        return
+
+    clinic_key = _clinic_label()
+    push_job = os.getenv("PROMETHEUS_WEB_PUSH_JOB", "healthcheck-django")
+    try:
+        push_to_gateway(
+            pushgateway_url,
+            job=push_job,
+            registry=REGISTRY,
+            grouping_key={"clinic": clinic_key, "component": "django"},
+        )
+    except Exception as exc:
+        logger.warning("Could not push web metrics to Pushgateway %s: %s", pushgateway_url, exc)
+
+
+def start_pushgateway_exporter() -> None:
+    # Push the Django process metrics to Pushgateway when enabled for the web app.
+
+    pushgateway_url = os.getenv("PROMETHEUS_PUSHGATEWAY_URL", "").strip()
+    if not pushgateway_url:
+        return
+
+    if os.environ.get("RUN_MAIN") != "true":
+        return
+
+    if os.getenv("PROMETHEUS_ENABLE_PUSH", "0").strip().lower() not in {"1", "true", "yes", "on"}:
+        return
+
+    global _pushgateway_started
+    with _pushgateway_lock:
+        if _pushgateway_started:
+            return
+        _pushgateway_started = True
+
+    push_interval = max(5, int(os.getenv("PROMETHEUS_PUSH_INTERVAL_SECONDS", "15")))
+
+    def _push_metrics_loop() -> None:
+        while True:
+            try:
+                push_metrics_to_gateway()
+            except Exception:
+                # Keep the app running even if Pushgateway is temporarily unavailable
+                pass
+            time.sleep(push_interval)
+
+    threading.Thread(target=_push_metrics_loop, daemon=True).start()
 
 
 def record_flower_round(model: str, round_number: int, clients: int, duration_seconds: float, status: str) -> None:

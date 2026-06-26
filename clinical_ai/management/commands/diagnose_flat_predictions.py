@@ -55,7 +55,7 @@ class Command(BaseCommand):
             report[key]["scaler_feature_names"] = sfn_list
             report[key]["outputs_probability"] = art.get("outputs_probability")
 
-            # sample data: build feature dicts from model helper methods to avoid DB field name mismatches
+            # sample data - build feature dicts from model helper methods to avoid DB field name mismatches
             rec_objs = list(PatientClinicalRecord.objects.all()[:sample_size])
             feats = []
             for r in rec_objs:

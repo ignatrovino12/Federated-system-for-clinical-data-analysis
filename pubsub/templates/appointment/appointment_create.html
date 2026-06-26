@@ -154,7 +154,7 @@
 </div>
 
 <script>
-// Frontend helpers for appointment form
+
 document.addEventListener('DOMContentLoaded', function() {
     // Set minimum date to today
     const dateInput = document.getElementById('appointment_date');
@@ -163,7 +163,6 @@ document.addEventListener('DOMContentLoaded', function() {
         dateInput.setAttribute('min', today);
     }
 
-    // Populate time dropdown with 15-minute intervals (00, 15, 30, 45)
     const timeSelect = document.getElementById('appointment_time');
     if (timeSelect) {
         const pad = (num) => (num < 10 ? '0' + num : '' + num);

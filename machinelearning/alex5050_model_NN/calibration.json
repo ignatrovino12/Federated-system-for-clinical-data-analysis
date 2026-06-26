@@ -1,12 +1,12 @@
 {
   "method": "bias_only",
-  "temperature": 0.9,
-  "coef": 0.9,
+  "temperature": 1.1,
+  "coef": 1.1,
   "intercept": -0.14999999999999997,
-  "decision_threshold": 0.12847016635525885,
+  "decision_threshold": 0.10208768874771529,
   "target_recall": 0.95,
-  "fitted_at": "2026-06-13T14:26:27.612502+00:00",
-  "n_samples": 740,
+  "fitted_at": "2026-06-15T09:59:27.073862+00:00",
+  "n_samples": 246,
   "source_model": "alex5050",
   "calibration_size": 0.3
 }

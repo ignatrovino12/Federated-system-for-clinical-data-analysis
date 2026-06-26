@@ -93,7 +93,6 @@ def get_accessible_patients(request_user, profile):
 
 
 def get_unread_appointments_count(user):
-    # Count unread appointments where the user is the doctor
     return Appointment.objects.filter(doctor=user, notification_read=False).count()
 
 
